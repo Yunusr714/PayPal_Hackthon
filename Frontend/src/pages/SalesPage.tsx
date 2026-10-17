@@ -1,63 +1,234 @@
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import {
-  Search, Plus, Eye, Pencil, Bell, Trash2, MoreHorizontal, IndianRupee,
+  Search, Plus, Eye, IndianRupee, Package, CheckCircle2,
+  AlertTriangle, Wrench, Scissors, FileText, Printer, Sparkles,
+  Clock, ShieldCheck, User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
-import {
-  Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationNext, PaginationLink,
-} from '@/components/ui/pagination';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { allSales, formatINR, type Sale } from '@/data/mock-data';
+import { useBusiness } from '@/context/BusinessContext';
+import { formatINR, PaymentMode, Sale } from '@/data/mock-data';
 
 export function SalesPage() {
+  const { sales, addSale, products, services, category, user } = useBusiness();
+  const isService = category === 'service';
+
   const [search, setSearch] = useState('');
   const [modeFilter, setModeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const itemsPerPage = 8;
 
+  // New Sale Modal State
+  const [isNewSaleOpen, setIsNewSaleOpen] = useState(false);
+
+  // Shop Mode State (Product selection & stock deduction)
+  const [selectedProductName, setSelectedProductName] = useState(products[0]?.name || 'Basmati Rice');
+  const [quantity, setQuantity] = useState('1');
+  const [unitPrice, setUnitPrice] = useState(products[0]?.sellingPrice?.toString() || '95');
+
+  // Service Mode State (Rate card selection & labor billing — Zero inventory!)
+  const [selectedServiceId, setSelectedServiceId] = useState(services[0]?.id || '');
+  const [serviceUnits, setServiceUnits] = useState('1');
+  const [serviceRate, setServiceRate] = useState(services[0]?.price?.toString() || '1800');
+  const [serviceClient, setServiceClient] = useState('Client Walk-in');
+  const [serviceNotes, setServiceNotes] = useState('');
+
+  // Common payment mode
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
+
+  // Receipt Modal State
+  const [selectedReceipt, setSelectedReceipt] = useState<Sale | null>(null);
+
+  // Active product details (Shop mode)
+  const activeProduct = useMemo(() => {
+    return products.find((p) => p.name === selectedProductName) || products[0];
+  }, [products, selectedProductName]);
+
+  // Active service details (Service mode)
+  const activeService = useMemo(() => {
+    return services.find((s) => s.id === selectedServiceId) || services[0];
+  }, [services, selectedServiceId]);
+
+  // Handle product selection (Shop mode)
+  const handleProductSelect = (name: string) => {
+    setSelectedProductName(name);
+    const matched = products.find((p) => p.name === name);
+    if (matched) {
+      setUnitPrice(matched.sellingPrice.toString());
+    }
+  };
+
+  // Handle service selection (Service mode)
+  const handleServiceSelect = (id: string) => {
+    setSelectedServiceId(id);
+    const matched = services.find((s) => s.id === id);
+    if (matched) {
+      setServiceRate(matched.price.toString());
+    }
+  };
+
+  const handleOpenSaleModal = () => {
+    if (isService) {
+      const defaultSrv = services[0];
+      setSelectedServiceId(defaultSrv?.id || '');
+      setServiceRate(defaultSrv?.price?.toString() || '1800');
+      setServiceUnits('1');
+      setServiceClient('Client Walk-in');
+      setServiceNotes('');
+      setPaymentMode('Cash');
+    } else {
+      const defaultProd = products[0]?.name || 'Basmati Rice';
+      const defaultPrice = products[0]?.sellingPrice?.toString() || '95';
+      setSelectedProductName(defaultProd);
+      setUnitPrice(defaultPrice);
+      setQuantity('1');
+      setPaymentMode('Cash');
+    }
+    setIsNewSaleOpen(true);
+  };
+
+  // Submit sale/invoice
+  const handleSaveSale = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isService) {
+      // SERVICE MODE: Zero inventory, labor & rate-card billing
+      const numUnits = parseFloat(serviceUnits);
+      const numRate = parseFloat(serviceRate);
+
+      if (isNaN(numUnits) || numUnits <= 0) {
+        toast.error('Please enter valid work units or hours');
+        return;
+      }
+      if (isNaN(numRate) || numRate <= 0) {
+        toast.error('Please enter a valid rate');
+        return;
+      }
+
+      const total = numUnits * numRate;
+      const srvName = activeService?.name || 'Custom Service';
+      const unitLabel = activeService?.pricingType === 'Hourly' ? (numUnits === 1 ? 'hr' : 'hrs') : (numUnits === 1 ? 'unit' : 'units');
+      const itemDescription = `${srvName} (${numUnits} ${unitLabel})${serviceNotes ? ` - ${serviceNotes}` : ''}`;
+
+      const createdSale = addSale({
+        productName: itemDescription,
+        quantity: numUnits,
+        unitPrice: numRate,
+        totalAmount: total,
+        mode: paymentMode,
+        status: 'Paid',
+        customer: serviceClient.trim() || 'Client Walk-in',
+      });
+
+      toast.success('Service Invoice Created & Paid!', {
+        description: `${createdSale.id}: ${srvName} billed for ${formatINR(total)} (Zero inventory applied).`,
+      });
+
+      setIsNewSaleOpen(false);
+    } else {
+      // SHOP MODE: Physical inventory, stock deduction & counter sale
+      const numQty = parseFloat(quantity);
+      const numPrice = parseFloat(unitPrice);
+
+      if (isNaN(numQty) || numQty <= 0) {
+        toast.error('Please enter a valid quantity');
+        return;
+      }
+      if (isNaN(numPrice) || numPrice <= 0) {
+        toast.error('Please enter a valid price');
+        return;
+      }
+
+      if (activeProduct && numQty > activeProduct.stock) {
+        toast.error('Insufficient Stock!', {
+          description: `Cannot sell ${numQty} ${activeProduct.unit}. Only ${activeProduct.stock} ${activeProduct.unit} available in inventory.`,
+        });
+        return;
+      }
+
+      const total = numQty * numPrice;
+
+      const createdSale = addSale({
+        productName: selectedProductName,
+        quantity: numQty,
+        unitPrice: numPrice,
+        totalAmount: total,
+        mode: paymentMode,
+        status: 'Paid',
+        customer: 'Counter Sale',
+      });
+
+      const remainingStock = Math.max(0, (activeProduct?.stock || 0) - numQty);
+
+      toast.success('Sale Completed & Stock Deducted!', {
+        description: `${createdSale.items} billed for ${formatINR(total)}. Remaining stock of ${selectedProductName}: ${remainingStock} ${activeProduct?.unit || 'units'}.`,
+      });
+
+      setIsNewSaleOpen(false);
+    }
+  };
+
   const filtered = useMemo(() => {
-    return allSales.filter((s) => {
-      const matchSearch = s.customer.toLowerCase().includes(search.toLowerCase()) ||
+    return sales.filter((s) => {
+      const matchSearch =
+        s.customer.toLowerCase().includes(search.toLowerCase()) ||
         s.id.toLowerCase().includes(search.toLowerCase()) ||
         s.items.toLowerCase().includes(search.toLowerCase());
       const matchMode = modeFilter === 'all' || s.mode === modeFilter;
       const matchStatus = statusFilter === 'all' || s.status === statusFilter;
       return matchSearch && matchMode && matchStatus;
     });
-  }, [search, modeFilter, statusFilter]);
+  }, [sales, search, modeFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
   const current = Math.min(page, totalPages);
   const pageData = filtered.slice((current - 1) * itemsPerPage, current * itemsPerPage);
 
-  const handleRemind = (sale: Sale) => toast.success('Reminder sent successfully', { description: `Reminder sent to ${sale.customer}.` });
-  const handleDelete = (sale: Sale) => toast.success('Sale deleted', { description: `${sale.id} has been removed.` });
-  const handleNewSale = () => toast.success('Sale saved successfully', { description: 'New invoice has been created.' });
+  // Shop calculations
+  const numQty = parseFloat(quantity) || 0;
+  const numPrice = parseFloat(unitPrice) || 0;
+  const currentStock = activeProduct ? activeProduct.stock : 0;
+  const stockAfterSale = Math.max(0, currentStock - numQty);
+  const isOutOfStock = numQty > currentStock;
+
+  // Service calculations
+  const numUnits = parseFloat(serviceUnits) || 0;
+  const numRate = parseFloat(serviceRate) || 0;
+  const serviceTotal = numUnits * numRate;
 
   return (
     <div className="space-y-5 animate-fade-in">
+      
+      {/* Top Search & Actions */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col sm:flex-row gap-2">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search sales..."
+              placeholder={isService ? 'Search invoice, client, or service...' : 'Search invoice or items...'}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="h-9 w-full rounded-lg border border-input bg-white pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="h-9 w-full rounded-xl border border-input bg-white pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
           <Select value={modeFilter} onValueChange={(v) => { setModeFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-full sm:w-36 h-9">
+            <SelectTrigger className="w-full sm:w-36 h-9 text-xs rounded-xl">
               <SelectValue placeholder="Payment Mode" />
             </SelectTrigger>
             <SelectContent>
@@ -69,7 +240,7 @@ export function SalesPage() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-full sm:w-32 h-9">
+            <SelectTrigger className="w-full sm:w-32 h-9 text-xs rounded-xl">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -80,65 +251,153 @@ export function SalesPage() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={handleNewSale} className="bg-primary text-primary-foreground hover:bg-primary-hover shrink-0">
-          <Plus className="h-4 w-4 mr-1.5" /> New Sale
+        
+        {/* Primary Action Button */}
+        <Button
+          onClick={handleOpenSaleModal}
+          className="bg-primary hover:bg-primary-hover text-white shrink-0 text-xs font-semibold h-9 rounded-xl shadow-sm"
+        >
+          {isService ? (
+            <>
+              <Plus className="h-4 w-4 mr-1.5" /> New Service Invoice
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4 mr-1.5" /> New Counter Sale
+            </>
+          )}
         </Button>
       </div>
 
-      <Card className="rounded-xl border-border shadow-sm">
+      {/* Top Status Strip: Service Rate Card (Service mode) vs Live Inventory (Shop mode) */}
+      {isService ? (
+        <div className="rounded-2xl border border-[#007F7C]/30 bg-[#E6F5F5]/40 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Wrench className="h-4 w-4 text-[#007F7C]" /> Active Services & Rate Card (Zero Inventory · Standard Labor Rates)
+            </span>
+            <span className="text-[11px] text-muted-foreground font-medium">
+              {services.length} services configured
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+            {services.slice(0, 4).map((srv) => (
+              <div
+                key={srv.id}
+                className="rounded-xl border border-[#007F7C]/20 bg-white p-2.5 transition-all hover:border-[#007F7C]/40 hover:shadow-xs"
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <p className="text-xs font-bold text-slate-900 truncate">{srv.name}</p>
+                  <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#E6F5F5] text-[#007F7C] border border-[#007F7C]/30">
+                    {srv.pricingType}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs">
+                  <span className="font-extrabold text-[#007F7C]">
+                    {formatINR(srv.price)}
+                    <span className="text-[10px] font-medium text-muted-foreground">
+                      /{srv.pricingType === 'Hourly' ? 'hr' : 'job'}
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">{srv.duration}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Package className="h-4 w-4 text-primary" /> Live Inventory Stock Levels (Auto-updates with each sale)
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              Total products: {products.length}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            {products.slice(0, 6).map((prod) => (
+              <div
+                key={prod.name}
+                className="rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 transition-all hover:bg-slate-100/70"
+              >
+                <p className="text-xs font-bold text-slate-900 truncate">{prod.name}</p>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-foreground">
+                    {prod.stock} <span className="text-[10px] font-medium text-muted-foreground">{prod.unit}</span>
+                  </span>
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+                      prod.stock <= 0
+                        ? 'bg-rose-100 text-rose-800'
+                        : prod.stock <= prod.reorderLevel
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}
+                  >
+                    {prod.stock <= 0 ? 'Out' : prod.stock <= prod.reorderLevel ? 'Low' : 'OK'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sales Invoices Table Card */}
+      <Card className="rounded-2xl border-border shadow-sm">
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-slate-50/70">
               <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="pl-6 text-xs uppercase tracking-wide">Invoice ID</TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Customer</TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Items</TableHead>
-                <TableHead className="text-xs uppercase tracking-wide text-right">Amount</TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Mode</TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Status</TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Due Date</TableHead>
-                <TableHead className="pr-6 text-xs uppercase tracking-wide text-right">Actions</TableHead>
+                <TableHead className="pl-6 text-xs uppercase font-semibold">Invoice ID</TableHead>
+                <TableHead className="text-xs uppercase font-semibold">
+                  {isService ? 'Client / Party' : 'Sale Type'}
+                </TableHead>
+                <TableHead className="text-xs uppercase font-semibold">
+                  {isService ? 'Service Rendered & Scope' : 'Product & Qty Sold'}
+                </TableHead>
+                <TableHead className="text-xs uppercase font-semibold text-right">
+                  {isService ? 'Charge Amount' : 'Amount'}
+                </TableHead>
+                <TableHead className="text-xs uppercase font-semibold">Payment Mode</TableHead>
+                <TableHead className="text-xs uppercase font-semibold">Status</TableHead>
+                <TableHead className="text-xs uppercase font-semibold">Date</TableHead>
+                <TableHead className="pr-6 text-xs uppercase font-semibold text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pageData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                    No sales found matching your filters.
+                    {isService ? 'No service billings found matching your filters.' : 'No sales found matching your filters.'}
                   </TableCell>
                 </TableRow>
               ) : (
                 pageData.map((sale) => (
-                  <TableRow key={sale.id} className="border-border">
-                    <TableCell className="pl-6 font-medium text-foreground text-sm">{sale.id}</TableCell>
-                    <TableCell className="text-sm text-foreground">{sale.customer}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-[160px] truncate">{sale.items}</TableCell>
-                    <TableCell className="text-sm font-semibold text-foreground text-right">{formatINR(sale.amount)}</TableCell>
+                  <TableRow key={sale.id} className="border-border hover:bg-slate-50/50">
+                    <TableCell className="pl-6 font-bold text-foreground text-xs">{sale.id}</TableCell>
+                    <TableCell>
+                      <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                        {sale.customer === 'Counter Sale' ? 'Counter Walk-in' : sale.customer}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-foreground font-medium max-w-[240px] truncate">{sale.items}</TableCell>
+                    <TableCell className="text-xs font-bold text-foreground text-right">{formatINR(sale.amount)}</TableCell>
                     <TableCell><StatusBadge status={sale.mode} /></TableCell>
                     <TableCell><StatusBadge status={sale.status} /></TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{sale.dueDate || '—'}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{sale.date}</TableCell>
                     <TableCell className="pr-6 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => toast.info('Viewing sale details', { description: sale.id })}>
-                            <Eye className="h-3.5 w-3.5 mr-2" /> View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toast.info('Editing sale', { description: sale.id })}>
-                            <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRemind(sale)}>
-                            <Bell className="h-3.5 w-3.5 mr-2" /> Send Reminder
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(sale)}>
-                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedReceipt(sale)}
+                        className="h-7 text-xs text-primary font-semibold hover:bg-accent px-2"
+                      >
+                        Receipt
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -148,28 +407,386 @@ export function SalesPage() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
-          Showing {pageData.length > 0 ? (current - 1) * itemsPerPage + 1 : 0}–{(current - 1) * itemsPerPage + pageData.length} of {filtered.length}
-        </p>
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious onClick={() => setPage(Math.max(1, current - 1))} className={current === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
-            </PaginationItem>
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <PaginationItem key={i}>
-                <PaginationLink isActive={current === i + 1} onClick={() => setPage(i + 1)} className="cursor-pointer">
-                  {i + 1}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            <PaginationItem>
-              <PaginationNext onClick={() => setPage(Math.min(totalPages, current + 1))} className={current === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
+      {/* NEW SALE / INVOICE MODAL */}
+      <Dialog open={isNewSaleOpen} onOpenChange={setIsNewSaleOpen}>
+        <DialogContent className="max-w-md rounded-2xl border-border bg-white p-6 shadow-2xl">
+          <DialogHeader className="pb-1">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                {isService ? <Wrench className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold text-foreground">
+                  {isService ? 'New Service Invoice' : 'New Counter Sale'}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  {isService
+                    ? 'Bill client for tailoring, plumbing, or service charges. Zero inventory required.'
+                    : 'Quick walk-in sale — select product and quantity. Stock is deducted automatically.'}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveSale} className="space-y-4 pt-2">
+            
+            {/* SERVICE MODE FORM FIELDS */}
+            {isService ? (
+              <>
+                {/* Service Selection */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-foreground">
+                      Service Offering <span className="text-destructive">*</span>
+                    </Label>
+                    {activeService && (
+                      <span className="text-[11px] font-semibold text-[#007F7C] bg-[#E6F5F5] px-2 py-0.5 rounded border border-[#007F7C]/30">
+                        {activeService.pricingType} · {activeService.duration}
+                      </span>
+                    )}
+                  </div>
+                  <Select value={selectedServiceId} onValueChange={handleServiceSelect}>
+                    <SelectTrigger className="h-10 text-sm">
+                      <SelectValue placeholder="Choose service from rate card..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {services.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name} · {formatINR(s.price)} ({s.pricingType})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Client Name Input */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="service-client" className="text-xs font-semibold text-foreground">
+                    Client / Party Name
+                  </Label>
+                  <Input
+                    id="service-client"
+                    type="text"
+                    placeholder="Client Walk-in or Customer Name"
+                    value={serviceClient}
+                    onChange={(e) => setServiceClient(e.target.value)}
+                    className="h-10 text-sm"
+                  />
+                </div>
+
+                {/* Units & Rate */}
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="service-units" className="text-xs font-semibold text-foreground">
+                      {activeService?.pricingType === 'Hourly' ? 'Hours / Time' : 'Work Units / Jobs'} <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="service-units"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={serviceUnits}
+                      onChange={(e) => setServiceUnits(e.target.value)}
+                      className="h-10 text-sm font-semibold"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="service-rate" className="text-xs font-semibold text-foreground">
+                      Labor Rate (₹) <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm">₹</span>
+                      <Input
+                        id="service-rate"
+                        type="number"
+                        min="0"
+                        step="10"
+                        value={serviceRate}
+                        onChange={(e) => setServiceRate(e.target.value)}
+                        className="h-10 pl-7 text-sm font-semibold"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Service Particulars / Notes */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="service-notes" className="text-xs font-semibold text-foreground">
+                    Work Description / Particulars (Optional)
+                  </Label>
+                  <Input
+                    id="service-notes"
+                    type="text"
+                    placeholder="e.g. Italian navy fabric trial, leak joint sealed"
+                    value={serviceNotes}
+                    onChange={(e) => setServiceNotes(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                </div>
+
+                {/* Service Model Banner (Zero Inventory info) */}
+                <div className="rounded-xl border border-[#007F7C]/30 bg-[#E6F5F5]/60 p-3 text-slate-800">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-[#005B59]">Billing Model:</span>
+                    <span className="font-bold text-[#007F7C]">Zero Inventory · Labor & Rates</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-1">
+                    <span className="font-medium text-muted-foreground">Standard Duration:</span>
+                    <span className="font-semibold">{activeService?.duration || 'Same day'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-1.5 pt-1.5 border-t border-[#007F7C]/20 font-bold">
+                    <span className="text-[#005B59]">Net Service Charge:</span>
+                    <span className="text-[#007F7C] font-black text-sm">
+                      {formatINR(serviceTotal)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* SHOP MODE FORM FIELDS */
+              <>
+                {/* Product Dropdown */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-foreground">
+                      Select Product <span className="text-destructive">*</span>
+                    </Label>
+                    {activeProduct && (
+                      <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                        In Stock: {activeProduct.stock} {activeProduct.unit}
+                      </span>
+                    )}
+                  </div>
+                  <Select value={selectedProductName} onValueChange={handleProductSelect}>
+                    <SelectTrigger className="h-10 text-sm">
+                      <SelectValue placeholder="Choose product..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {products.map((p) => (
+                        <SelectItem key={p.name} value={p.name}>
+                          {p.name} · {formatINR(p.sellingPrice)}/{p.unit} ({p.stock} left)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Quantity and Unit Price */}
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sale-qty" className="text-xs font-semibold text-foreground">
+                      Quantity ({activeProduct?.unit || 'units'}) <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="sale-qty"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      className={`h-10 text-sm font-semibold ${isOutOfStock ? 'border-destructive text-destructive' : ''}`}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sale-price" className="text-xs font-semibold text-foreground">
+                      Unit Price (₹) <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm">₹</span>
+                      <Input
+                        id="sale-price"
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={unitPrice}
+                        onChange={(e) => setUnitPrice(e.target.value)}
+                        className="h-10 pl-7 text-sm font-semibold"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Stock Updation Preview Box */}
+                <div className={`rounded-xl border p-3 transition-colors ${
+                  isOutOfStock
+                    ? 'border-rose-300 bg-rose-50 text-rose-900'
+                    : 'border-blue-200 bg-blue-50/60 text-slate-800'
+                }`}>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium">Original Stock:</span>
+                    <span className="font-bold">{currentStock} {activeProduct?.unit}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-1">
+                    <span className="font-medium">Quantity to Sell:</span>
+                    <span className="font-bold text-destructive">-{numQty} {activeProduct?.unit}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-1.5 pt-1.5 border-t border-slate-200 font-bold">
+                    <span>Remaining Stock after Sale:</span>
+                    <span className={isOutOfStock ? 'text-destructive font-black' : 'text-emerald-700 font-black'}>
+                      {isOutOfStock ? 'Insufficient Stock!' : `${stockAfterSale} ${activeProduct?.unit}`}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Payment Mode Selection */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-foreground">
+                Payment Mode
+              </Label>
+              <div className="grid grid-cols-4 gap-2">
+                {(['Cash', 'UPI', 'Credit', 'PayPal'] as PaymentMode[]).map((mode) => (
+                  <button
+                    type="button"
+                    key={mode}
+                    onClick={() => setPaymentMode(mode)}
+                    className={`rounded-lg py-1.5 text-xs font-semibold border transition-all ${
+                      paymentMode === mode
+                        ? 'border-primary bg-primary text-white shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Total Bill Banner */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  {isService ? 'Total Service Invoice' : 'Total Bill Amount'}
+                </span>
+                <p className="text-[10px] text-muted-foreground">
+                  {isService ? 'Labor & workmanship charge' : 'Counter invoice total'}
+                </p>
+              </div>
+              <span className="text-xl font-black text-slate-900">
+                {formatINR(isService ? serviceTotal : numQty * numPrice)}
+              </span>
+            </div>
+
+            <DialogFooter className="pt-2 gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsNewSaleOpen(false)}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isService ? serviceTotal <= 0 : (isOutOfStock || numQty <= 0)}
+                className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold"
+              >
+                {isService ? (
+                  <>
+                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Generate Service Invoice
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-1.5 h-3.5 w-3.5" /> Complete Sale & Deduct Stock
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* RECEIPT / INVOICE MODAL */}
+      <Dialog open={!!selectedReceipt} onOpenChange={(open) => !open && setSelectedReceipt(null)}>
+        <DialogContent className="max-w-md rounded-2xl border-border bg-white p-6 shadow-2xl">
+          {selectedReceipt && (
+            <div className="space-y-4">
+              {/* Receipt Header */}
+              <div className="border-b pb-3 text-center">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-primary">
+                  {isService ? 'Service Billing & Receipt' : 'Retail Cash Memo'}
+                </span>
+                <h3 className="text-base font-bold text-slate-900 mt-0.5">{user.businessName}</h3>
+                <p className="text-[11px] text-muted-foreground">{user.address || 'GSTIN / Retail Store'}</p>
+              </div>
+
+              {/* Invoice Meta */}
+              <div className="grid grid-cols-2 text-xs gap-2 py-1 border-b border-dashed border-slate-200">
+                <div>
+                  <span className="text-muted-foreground text-[10px]">Invoice No:</span>
+                  <p className="font-bold text-slate-800">{selectedReceipt.id}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-muted-foreground text-[10px]">Date:</span>
+                  <p className="font-bold text-slate-800">{selectedReceipt.date}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-[10px]">{isService ? 'Client / Billed To:' : 'Customer:'}</span>
+                  <p className="font-bold text-slate-800">{selectedReceipt.customer}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-muted-foreground text-[10px]">Payment Mode:</span>
+                  <p className="font-bold text-slate-800">{selectedReceipt.mode} ({selectedReceipt.status})</p>
+                </div>
+              </div>
+
+              {/* Particulars Table */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-semibold text-slate-500 uppercase border-b pb-1">
+                  <span>{isService ? 'Service Scope / Work' : 'Item Particulars'}</span>
+                  <span>Amount</span>
+                </div>
+                <div className="flex justify-between text-xs font-medium text-slate-900 py-1">
+                  <span className="max-w-[260px]">{selectedReceipt.items}</span>
+                  <span className="font-bold">{formatINR(selectedReceipt.amount)}</span>
+                </div>
+              </div>
+
+              {/* Total & Model Note */}
+              <div className="border-t border-slate-200 pt-3">
+                <div className="flex justify-between items-center text-sm font-extrabold text-slate-900">
+                  <span>Total Amount Paid</span>
+                  <span className="text-lg text-primary">{formatINR(selectedReceipt.amount)}</span>
+                </div>
+                {isService && (
+                  <p className="mt-2 text-[10px] text-[#007F7C] bg-[#E6F5F5] rounded p-1.5 border border-[#007F7C]/30 flex items-center gap-1.5 font-medium">
+                    <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                    Zero Inventory Model: Quality workmanship & service guaranteed.
+                  </p>
+                )}
+              </div>
+
+              <DialogFooter className="pt-2 flex justify-between sm:justify-between items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedReceipt(null)}
+                  className="text-xs"
+                >
+                  Close
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => toast.success('Invoice Sent!', { description: `Receipt for ${selectedReceipt.id} shared via WhatsApp / SMS.` })}
+                  className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold"
+                >
+                  <Printer className="mr-1.5 h-3.5 w-3.5" /> Share / Print Receipt
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

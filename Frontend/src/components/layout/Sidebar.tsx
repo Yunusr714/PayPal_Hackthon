@@ -1,31 +1,14 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Sparkles, ShoppingCart, BookOpen, Users,
   Package, Truck, CreditCard, BarChart3, Settings,
-  ShoppingBasket, ArrowRight,
+  Store, Scissors, Wrench, RefreshCw, UserPlus, LogIn, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  LayoutDashboard, Sparkles, ShoppingCart, BookOpen, Users,
-  Package, Truck, CreditCard, BarChart3, Settings,
-};
-
-const navItems = [
-  { label: 'Dashboard', path: '/', icon: 'LayoutDashboard' },
-  { label: 'AI Assistant', path: '/ai-assistant', icon: 'Sparkles' },
-  { label: 'Sales', path: '/sales', icon: 'ShoppingCart' },
-  { label: 'Khata / Credit Book', path: '/khata', icon: 'BookOpen' },
-  { label: 'Customers', path: '/customers', icon: 'Users' },
-  { label: 'Inventory', path: '/inventory', icon: 'Package' },
-  { label: 'Suppliers', path: '/suppliers', icon: 'Truck' },
-  { label: 'Payments', path: '/payments', icon: 'CreditCard' },
-  { label: 'Reports', path: '/reports', icon: 'BarChart3' },
-  { label: 'Settings', path: '/settings', icon: 'Settings' },
-];
+import { useBusiness } from '@/context/BusinessContext';
 
 interface SidebarContentProps {
   onNavigate?: () => void;
@@ -33,27 +16,55 @@ interface SidebarContentProps {
 
 function SidebarContent({ onNavigate }: SidebarContentProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, category, toggleCategory } = useBusiness();
+
+  // Navigation items dynamically adapt to Shop vs Service
+  const navItems = [
+    { label: 'Dashboard', path: '/', icon: LayoutDashboard },
+    {
+      label: category === 'service' ? 'Service Billings' : 'Sales & Invoices',
+      path: '/sales',
+      icon: category === 'service' ? Wrench : ShoppingCart,
+    },
+    { label: 'Khata / Credit Book', path: '/khata', icon: BookOpen },
+    { label: 'Customers', path: '/customers', icon: Users },
+    // Show Services for Service professionals, Inventory for Shops
+    ...(category === 'service'
+      ? [{ label: 'Services & Rates', path: '/services', icon: Scissors }]
+      : [{ label: 'Inventory', path: '/inventory', icon: Package }]),
+    { label: 'Payments', path: '/payments', icon: CreditCard },
+    { label: 'Settings', path: '/settings', icon: Settings },
+  ];
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="px-5 pt-6 pb-5 border-b border-border">
+    <div className="flex h-full w-full flex-col bg-white">
+      {/* Brand Header: Aligns seamlessly with the h-16 top header with zero gap */}
+      <div className="flex h-16 w-full shrink-0 items-center px-5 border-b border-border bg-white box-border">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-            <ShoppingBasket className="h-5 w-5 text-white" />
+          <div className={cn(
+            'flex h-9 w-9 items-center justify-center rounded-xl shadow-sm text-white',
+            category === 'service' ? 'bg-[#007F7C] shadow-[#007F7C]/20' : 'bg-blue-600 shadow-blue-600/20'
+          )}>
+            {category === 'service' ? <Wrench className="h-5 w-5" /> : <Store className="h-5 w-5" />}
           </div>
-          <span className="text-lg font-bold text-foreground">KiranaPay</span>
-        </div>
-        <div className="mt-4">
-          <p className="text-sm font-semibold text-foreground">Sharma Kirana Store</p>
-          <p className="text-xs text-muted-foreground">Ramesh Sharma</p>
+          <div>
+            <span className="text-lg font-black tracking-tight text-foreground">KiranaPay</span>
+            <span className="ml-1.5 rounded bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase">
+              Pro
+            </span>
+          </div>
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
-        <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Menu</p>
+      {/* Navigation List */}
+      <nav className="flex-1 w-full overflow-y-auto px-3 py-3 scrollbar-thin">
+        <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">
+          Navigation
+        </p>
         <ul className="space-y-1">
           {navItems.map((item) => {
-            const Icon = iconMap[item.icon];
+            const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
               <li key={item.path}>
@@ -61,17 +72,33 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
                   to={item.path}
                   onClick={onNavigate}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 relative',
+                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 relative group',
                     isActive
-                      ? 'bg-accent text-primary font-semibold'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      ? category === 'service'
+                        ? 'bg-[#E6F5F5] text-[#007F7C] font-bold shadow-2xs'
+                        : 'bg-blue-50 text-blue-600 font-bold shadow-2xs'
+                      : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
                   )}
                 >
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full bg-primary" />
+                    <span
+                      className={cn(
+                        'absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full',
+                        category === 'service' ? 'bg-[#007F7C]' : 'bg-blue-600'
+                      )}
+                    />
                   )}
-                  <Icon className="h-[18px] w-[18px] shrink-0" />
-                  {item.label}
+                  <Icon
+                    className={cn(
+                      'h-[18px] w-[18px] shrink-0 transition-transform duration-150 group-hover:scale-105',
+                      isActive
+                        ? category === 'service'
+                          ? 'text-[#007F7C]'
+                          : 'text-blue-600'
+                        : 'text-muted-foreground'
+                    )}
+                  />
+                  <span>{item.label}</span>
                 </NavLink>
               </li>
             );
@@ -79,18 +106,51 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
         </ul>
       </nav>
 
-      <div className="p-3 border-t border-border">
-        <div className="rounded-xl bg-gradient-to-br from-accent to-blue-50 p-4 border border-blue-100">
-          <p className="text-sm font-semibold text-foreground">Upgrade Plan</p>
-          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-            Unlock advanced AI insights and unlimited reminders.
-          </p>
-          <Button
-            size="sm"
-            className="mt-3 w-full bg-primary text-primary-foreground hover:bg-primary-hover"
+      {/* Bottom Switcher Card: Completely replaces the old "Upgrade Plan" box */}
+      <div className="w-full p-3 border-t border-border bg-slate-50/50">
+        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-700">Workspace Mode</span>
+            <span
+              className={cn(
+                'text-[10px] font-bold px-2 py-0.5 rounded-full border',
+                category === 'service'
+                  ? 'bg-[#E6F5F5] text-[#007F7C] border-[#007F7C]/30'
+                  : 'bg-blue-50 text-blue-700 border-blue-200'
+              )}
+            >
+              {category === 'service' ? 'Service (Teal)' : 'Shop (Blue)'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              toggleCategory();
+              onNavigate?.();
+            }}
+            className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 py-1.5 px-2 text-xs font-semibold text-slate-800 transition-colors"
           >
-            Upgrade <ArrowRight className="ml-1 h-3.5 w-3.5" />
-          </Button>
+            <RefreshCw className="h-3 w-3 text-slate-500" />
+            Switch to {category === 'service' ? 'Shop Mode' : 'Service Mode'}
+          </button>
+
+          <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-100">
+            <NavLink
+              to="/register"
+              onClick={onNavigate}
+              className="inline-flex items-center justify-center gap-1 text-[11px] font-medium text-slate-500 hover:text-primary py-1"
+            >
+              <UserPlus className="h-3 w-3" /> Register
+            </NavLink>
+            <NavLink
+              to="/login"
+              onClick={onNavigate}
+              className="inline-flex items-center justify-center gap-1 text-[11px] font-medium text-slate-500 hover:text-primary py-1"
+            >
+              <LogIn className="h-3 w-3" /> Sign In
+            </NavLink>
+          </div>
         </div>
       </div>
     </div>
@@ -99,7 +159,7 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
 
 export function Sidebar() {
   return (
-    <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 border-r border-border z-30">
+    <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 border-r border-border z-30 bg-white box-border">
       <SidebarContent />
     </aside>
   );

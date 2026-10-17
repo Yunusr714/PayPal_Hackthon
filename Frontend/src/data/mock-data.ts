@@ -230,8 +230,6 @@ export const navItems = [
   { label: 'Khata / Credit Book', path: '/khata', icon: 'BookOpen' },
   { label: 'Customers', path: '/customers', icon: 'Users' },
   { label: 'Inventory', path: '/inventory', icon: 'Package' },
-  { label: 'Suppliers', path: '/suppliers', icon: 'Truck' },
   { label: 'Payments', path: '/payments', icon: 'CreditCard' },
-  { label: 'Reports', path: '/reports', icon: 'BarChart3' },
   { label: 'Settings', path: '/settings', icon: 'Settings' },
 ];

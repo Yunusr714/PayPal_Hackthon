@@ -2,9 +2,10 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
   PieChart, Pie, Cell, RadialBarChart, RadialBar,
-  ComposedChart, Legend,
+  ComposedChart, Legend, LabelList,
 } from 'recharts';
 import { formatINR } from '@/data/mock-data';
+import { useBusiness } from '@/context/BusinessContext';
 
 const tooltipStyle = {
   borderRadius: '12px',
@@ -21,52 +22,75 @@ const formatINRShort = (val: number): string => {
   return `₹${val}`;
 };
 
+function useThemeColor(): string {
+  try {
+    const { category } = useBusiness();
+    return category === 'service' ? '#007F7C' : '#2563eb';
+  } catch (e) {
+    return '#2563eb';
+  }
+}
+
 interface AreaChartProps {
   data: Array<Record<string, any>>;
   xKey: string;
   yKey: string;
   color?: string;
   height?: number;
+  hideAxes?: boolean;
 }
 
-export function AreaChartCard({ data, xKey, yKey, color = 'hsl(var(--primary))', height = 260 }: AreaChartProps) {
+export function AreaChartCard({ data, xKey, yKey, color, height = 260, hideAxes }: AreaChartProps) {
+  const themeColor = useThemeColor();
+  const activeColor = color && color !== 'hsl(var(--primary))' ? color : themeColor;
+  const isMini = hideAxes || height <= 60;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+      <AreaChart
+        data={data}
+        margin={isMini ? { top: 4, right: 0, left: 0, bottom: 0 } : { top: 10, right: 10, left: 0, bottom: 0 }}
+      >
         <defs>
           <linearGradient id={`areaGrad-${yKey}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={color} stopOpacity={0.2} />
-            <stop offset="95%" stopColor={color} stopOpacity={0} />
+            <stop offset="5%" stopColor={activeColor} stopOpacity={0.25} />
+            <stop offset="95%" stopColor={activeColor} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-        <XAxis
-          dataKey={xKey}
-          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-          axisLine={false}
-          tickLine={false}
-          tickFormatter={formatINRShort}
-          width={60}
-        />
-        <Tooltip
-          contentStyle={tooltipStyle}
-          formatter={(value: any) => [formatINR(value), 'Sales']}
-          labelStyle={{ fontWeight: 600, color: 'hsl(var(--foreground))' }}
-        />
+        {!isMini && <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />}
+        {!isMini && (
+          <XAxis
+            dataKey={xKey}
+            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+            axisLine={false}
+            tickLine={false}
+          />
+        )}
+        {!isMini && (
+          <YAxis
+            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={formatINRShort}
+            width={60}
+          />
+        )}
+        {!isMini && (
+          <Tooltip
+            contentStyle={tooltipStyle}
+            formatter={(value: any) => [formatINR(value), 'Sales']}
+            labelStyle={{ fontWeight: 600, color: 'hsl(var(--foreground))' }}
+          />
+        )}
         <Area
           type="monotone"
           dataKey={yKey}
-          stroke={color}
-          strokeWidth={2.5}
+          stroke={activeColor}
+          strokeWidth={isMini ? 2 : 2.5}
           fill={`url(#areaGrad-${yKey})`}
           animationDuration={800}
           dot={{ r: 0 }}
-          activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
+          activeDot={!isMini ? { r: 5, fill: activeColor, stroke: 'white', strokeWidth: 2 } : false}
         />
       </AreaChart>
     </ResponsiveContainer>
@@ -105,7 +129,7 @@ export function LineChartCard({ data, xKey, lines, height = 260 }: {
   );
 }
 
-export function BarChartCard({ data, xKey, yKey, color = 'hsl(var(--primary))', height = 260, horizontal = false, showLabels = false }: {
+export function BarChartCard({ data, xKey, yKey, color, height = 260, horizontal = false, showLabels = false }: {
   data: Array<Record<string, any>>;
   xKey: string;
   yKey: string;
@@ -114,6 +138,9 @@ export function BarChartCard({ data, xKey, yKey, color = 'hsl(var(--primary))', 
   horizontal?: boolean;
   showLabels?: boolean;
 }) {
+  const themeColor = useThemeColor();
+  const activeColor = color && color !== 'hsl(var(--primary))' ? color : themeColor;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart
@@ -134,7 +161,7 @@ export function BarChartCard({ data, xKey, yKey, color = 'hsl(var(--primary))', 
           </>
         )}
         <Tooltip contentStyle={tooltipStyle} formatter={(value: any) => [formatINR(Number(value)), 'Sales']} cursor={{ fill: 'hsl(var(--muted))' }} labelStyle={{ fontWeight: 600 }} />
-        <Bar dataKey={yKey} fill={color} radius={[6, 6, 0, 0]} animationDuration={800}>
+        <Bar dataKey={yKey} fill={activeColor} radius={[6, 6, 0, 0]} animationDuration={800}>
           {showLabels && <LabelList dataKey={yKey} position="top" formatter={formatINRShort} style={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />}
         </Bar>
       </BarChart>
@@ -142,15 +169,14 @@ export function BarChartCard({ data, xKey, yKey, color = 'hsl(var(--primary))', 
   );
 }
 
-// Import LabelList for bar value labels
-import { LabelList } from 'recharts';
-
 export function PieChartCard({ data, height = 260, centerLabel, centerValue }: {
   data: Array<{ name: string; value: number; fill: string }>;
   height?: number;
   centerLabel?: string;
   centerValue?: string;
 }) {
+  const themeColor = useThemeColor();
+
   return (
     <div className="relative" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -165,9 +191,10 @@ export function PieChartCard({ data, height = 260, centerLabel, centerValue }: {
             dataKey="value"
             animationDuration={800}
           >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.fill} />
-            ))}
+            {data.map((entry, index) => {
+              const fill = entry.fill === 'hsl(var(--primary))' ? themeColor : entry.fill;
+              return <Cell key={`cell-${index}`} fill={fill} />;
+            })}
           </Pie>
           <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [`${value}%`, name]} />
           <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />

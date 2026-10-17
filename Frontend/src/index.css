@@ -5,21 +5,22 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  :root,
+  [data-category="shop"] {
     --background: 0 0% 100%;
     --foreground: 217 19% 11%;
     --card: 0 0% 100%;
     --card-foreground: 217 19% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 217 19% 11%;
-    --primary: 217 91% 53%;
+    --primary: 217 91% 53%; /* Blue #2563EB */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 217 91% 44%;
+    --primary-hover: 217 91% 44%; /* #1D4ED8 */
     --secondary: 210 40% 96%;
     --secondary-foreground: 217 19% 11%;
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-    --accent: 214 100% 97%;
+    --accent: 214 100% 97%; /* #EFF6FF */
     --accent-foreground: 217 91% 53%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -36,6 +37,16 @@
     --chart-3: 38 92% 50%;
     --chart-4: 0 72% 51%;
     --chart-5: 280 65% 60%;
+  }
+
+  [data-category="service"] {
+    --primary: 179 100% 25%; /* Teal #007F7C */
+    --primary-hover: 179 100% 20%; /* Darker Teal #006663 */
+    --primary-foreground: 0 0% 100%;
+    --accent: 179 50% 95%; /* Soft Teal Tint #E6F5F5 */
+    --accent-foreground: 179 100% 25%; /* #007F7C */
+    --ring: 179 100% 25%;
+    --chart-1: 179 100% 25%; /* Teal #007F7C */
   }
 }
 
@@ -65,6 +76,17 @@
   }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
+  }
+  .no-scrollbar::-webkit-scrollbar,
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+    width: 0px;
+    height: 0px;
+  }
+  .no-scrollbar,
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out;
