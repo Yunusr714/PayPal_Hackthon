@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Wallet, TrendingUp, TrendingDown, AlertTriangle, Send, Eye, CreditCard, Bell, ChevronRight } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, AlertTriangle, Send, Eye, CreditCard, Bell, ChevronRight, MessageSquareQuote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
@@ -22,21 +22,28 @@ export function KhataPage() {
   const isService = category === 'service';
 
   const summaryCards = useMemo(() => {
+    const totalVolume = customers.reduce((acc, c) => acc + (c.totalPurchases || 0), 0);
+    const totalOutstanding = customers.reduce((acc, c) => acc + (c.outstanding || 0), 0);
+    const totalCollected = Math.max(0, totalVolume - totalOutstanding);
+    const overdueTotal = customerDues
+      .filter((d) => d.status === 'Overdue')
+      .reduce((acc, d) => acc + (d.totalAmount || 0), 0);
+
     if (isService) {
       return [
-        { title: 'Total Service Credit', value: formatINR(34200), icon: Wallet, variant: 'default' as const },
-        { title: 'Settled Billings', value: formatINR(20000), icon: TrendingUp, variant: 'default' as const },
-        { title: 'Outstanding Service Khata', value: formatINR(14200), icon: TrendingDown, variant: 'warning' as const },
-        { title: 'Overdue Dues', value: formatINR(2250), icon: AlertTriangle, variant: 'danger' as const },
+        { title: 'Total Service Volume', value: formatINR(totalVolume), icon: Wallet, variant: 'default' as const },
+        { title: 'Settled Billings', value: formatINR(totalCollected), icon: TrendingUp, variant: 'default' as const },
+        { title: 'Outstanding Service Khata', value: formatINR(totalOutstanding), icon: TrendingDown, variant: 'warning' as const },
+        { title: 'Overdue Dues', value: formatINR(overdueTotal), icon: AlertTriangle, variant: 'danger' as const },
       ];
     }
     return [
-      { title: 'Total Credit Given', value: formatINR(124500), icon: Wallet, variant: 'default' as const },
-      { title: 'Total Collected', value: formatINR(85800), icon: TrendingUp, variant: 'default' as const },
-      { title: 'Outstanding', value: formatINR(38700), icon: TrendingDown, variant: 'warning' as const },
-      { title: 'Overdue Amount', value: formatINR(9400), icon: AlertTriangle, variant: 'danger' as const },
+      { title: 'Total Credit Given', value: formatINR(totalVolume), icon: Wallet, variant: 'default' as const },
+      { title: 'Total Collected', value: formatINR(totalCollected), icon: TrendingUp, variant: 'default' as const },
+      { title: 'Outstanding Balance', value: formatINR(totalOutstanding), icon: TrendingDown, variant: 'warning' as const },
+      { title: 'Overdue Amount', value: formatINR(overdueTotal), icon: AlertTriangle, variant: 'danger' as const },
     ];
-  }, [isService]);
+  }, [isService, customers, customerDues]);
 
   const customerKhataList = useMemo(() => {
     return customers.map((c) => {
@@ -85,12 +92,26 @@ export function KhataPage() {
               </div>
               <Button
                 size="sm"
-                onClick={() => toast.success('Bulk reminders sent', { description: 'Reminders sent to all customers with dues.' })}
+                onClick={() => {
+                  const overdueCustomers = customerKhataList.filter((k) => k.outstanding > 0);
+                  if (overdueCustomers.length === 0) {
+                    toast.info('All dues are cleared! No outstanding balances.');
+                    return;
+                  }
+                  const top = overdueCustomers[0];
+                  const cleanPhone = (top.phone || '').replace(/[^0-9]/g, '');
+                  const waPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+                  const msg = `Namaste ${top.customer} ji! Polite reminder from Cashiko: you have an outstanding balance of ₹${top.outstanding.toLocaleString('en-IN')}. Please settle at your earliest convenience. Thank you!`;
+                  window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                  toast.success('Dispatched WhatsApp Reminder', {
+                    description: `Opened chat for highest pending due: ${top.customer} (₹${top.outstanding.toLocaleString('en-IN')}).`,
+                  });
+                }}
                 className={isService
                   ? 'bg-[#007F7C] hover:bg-[#006663] text-white font-semibold text-xs'
                   : 'bg-primary text-primary-foreground hover:bg-primary-hover font-semibold text-xs'}
               >
-                <Send className="h-3.5 w-3.5 mr-1.5" /> Send Bulk Reminders
+                <Send className="h-3.5 w-3.5 mr-1.5" /> Send Reminder to Dues
               </Button>
             </div>
           </CardHeader>
@@ -155,14 +176,27 @@ export function KhataPage() {
                             <DropdownMenuItem onClick={() => navigate(`/customers/${encodeURIComponent(entry.customer)}`)}>
                               <Eye className="h-3.5 w-3.5 mr-2" /> View Ledger
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toast.success('Reminder sent', { description: `Reminder sent to ${entry.customer}.` })}>
-                              <Bell className="h-3.5 w-3.5 mr-2" /> Send Reminder
+                            <DropdownMenuItem onClick={() => {
+                              const cleanPhone = (entry.phone || '').replace(/[^0-9]/g, '');
+                              const waPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+                              const msg = `Namaste ${entry.customer} ji! Polite reminder from Cashiko: you have an outstanding khata balance of ₹${entry.outstanding.toLocaleString('en-IN')}. Please settle at your convenience. Thank you!`;
+                              window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                              toast.success('WhatsApp Reminder Dispatched', { description: `Opened chat for ${entry.customer}.` });
+                            }}>
+                              <Bell className="h-3.5 w-3.5 mr-2 text-emerald-600" /> WhatsApp Reminder
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
-                              toast.success('Payment link generated', { description: `Link sent to ${entry.customer}.` });
                               navigate(`/customers/${encodeURIComponent(entry.customer)}`);
                             }}>
                               <CreditCard className="h-3.5 w-3.5 mr-2" /> Collect Payment
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              navigate(`/create?brief=${encodeURIComponent(`Client: ${entry.customer} (${entry.phone}). Outstanding balance: $${(entry.outstanding / 80).toFixed(2)}. Deliverables: Retail & Service billing dues.`)}`);
+                            }}>
+                              <Send className="h-3.5 w-3.5 mr-2 text-blue-600" /> Draft PayPal Invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate('/triage')}>
+                              <MessageSquareQuote className="h-3.5 w-3.5 mr-2 text-indigo-600" /> Reply Copilot
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

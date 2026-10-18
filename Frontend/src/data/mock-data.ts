@@ -126,8 +126,11 @@ export const khataData: KhataEntry[] = [
 ];
 
 export interface Customer {
+  id?: string;
   name: string;
   phone: string;
+  email?: string;
+  category?: 'shop' | 'service' | 'both' | string;
   totalPurchases: number;
   outstanding: number;
   behaviour: 'Excellent' | 'Good' | 'Fair' | 'Poor';

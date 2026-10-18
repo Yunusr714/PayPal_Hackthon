@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import {
   Scissors, Wrench, Sparkles, Plus, Search, Filter,
   Clock, IndianRupee, CheckCircle2, AlertCircle, Calendar,
-  Phone, User, Trash2, Edit3, ArrowRight, Briefcase, Zap, ShieldCheck
+  Phone, User, Trash2, Edit3, ArrowRight, Briefcase, Zap, ShieldCheck, Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { KPICard } from '@/components/shared/KPICard';
 import { AddServiceDialog } from '@/components/shared/AddServiceDialog';
 import { AddJobDialog } from '@/components/shared/AddJobDialog';
+import { PrintableReceiptModal, ReceiptData } from '@/components/shared/PrintableReceiptModal';
 import { useBusiness, ServiceItem, ServiceJob } from '@/context/BusinessContext';
 import { formatINR } from '@/data/mock-data';
 
@@ -23,6 +24,7 @@ export function ServicesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
+  const [printableData, setPrintableData] = useState<ReceiptData | null>(null);
 
   const categories = ['All', ...Array.from(new Set(services.map((s) => s.category)))];
 
@@ -324,10 +326,47 @@ export function ServicesPage() {
                           )}
                           <Button
                             size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const rData: ReceiptData = {
+                                id: job.id,
+                                type: 'service_order',
+                                title: 'Service Work Order & Job Slip',
+                                date: job.dueDate || 'Today',
+                                dueDate: job.dueDate,
+                                customerName: job.customerName,
+                                customerPhone: job.phone,
+                                items: [
+                                  {
+                                    description: `${job.serviceName}${job.notes ? ` (${job.notes})` : ''}`,
+                                    quantity: 1,
+                                    unitPrice: job.amount,
+                                    total: job.amount,
+                                  },
+                                ],
+                                subtotal: job.amount,
+                                tax: 0,
+                                total: job.amount,
+                                paymentMode: job.status === 'Delivered' ? 'Cash / Paid' : 'Credit / Khata',
+                                status: job.status === 'Delivered' ? 'Paid' : 'Pending',
+                                notes: 'Zero Inventory Specialist Services: Workmanship guaranteed for 30 days.',
+                              };
+                              setPrintableData(rData);
+                            }}
+                            className="h-7 text-[11px] px-2 text-[#007F7C] border-[#007F7C]/30 hover:bg-[#E6F5F5] font-semibold"
+                          >
+                            <Printer className="mr-1 h-3 w-3" /> Slip
+                          </Button>
+                          <Button
+                            size="sm"
                             variant="ghost"
                             onClick={() => {
-                              toast.success('WhatsApp Receipt Sent!', {
-                                description: `Bill for ${job.serviceName} (${formatINR(job.amount)}) sent to ${job.customerName}.`,
+                              const cleanPhone = (job.phone || '').replace(/[^0-9]/g, '');
+                              const waPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+                              const msg = `Namaste ${job.customerName}! Here is your Cashiko service job slip for ${job.serviceName}. Amount: ₹${job.amount.toLocaleString('en-IN')}. Status: ${job.status}. Due Date: ${job.dueDate}. Thank you!`;
+                              window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                              toast.success('WhatsApp Receipt Dispatched!', {
+                                description: `Opened WhatsApp for ${job.customerName} (${job.phone}).`,
                               });
                             }}
                             className="h-7 text-[11px] px-2 text-emerald-700 hover:text-emerald-800"
@@ -354,6 +393,13 @@ export function ServicesPage() {
       <AddJobDialog
         open={isAddJobOpen}
         onOpenChange={setIsAddJobOpen}
+      />
+
+      {/* Printable Thermal & A4 Work Order Slip Modal */}
+      <PrintableReceiptModal
+        open={!!printableData}
+        onOpenChange={(open) => !open && setPrintableData(null)}
+        data={printableData}
       />
     </div>
   );

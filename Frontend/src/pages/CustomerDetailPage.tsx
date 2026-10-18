@@ -4,12 +4,13 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Plus, Phone, Calendar, Clock, IndianRupee,
   Share2, CheckCircle2, AlertTriangle, Check, Wallet,
-  User, Sparkles, Filter, ChevronRight, BookOpen,
+  User, Sparkles, Filter, ChevronRight, BookOpen, Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
+import { PrintableReceiptModal, ReceiptData } from '@/components/shared/PrintableReceiptModal';
 import {
   Dialog,
   DialogContent,
@@ -37,7 +38,7 @@ function getInitials(name: string): string {
 export function CustomerDetailPage() {
   const { customerName } = useParams<{ customerName: string }>();
   const navigate = useNavigate();
-  const { customers, services, products, category, addCustomerDue, markDuePaid, getDuesForCustomer } = useBusiness();
+  const { user, customers, services, products, category, addCustomerDue, markDuePaid, getDuesForCustomer } = useBusiness();
 
   const decodedName = customerName ? decodeURIComponent(customerName) : '';
 
@@ -57,6 +58,7 @@ export function CustomerDetailPage() {
   const [unitPrice, setUnitPrice] = useState('');
   const [dueDate, setDueDate] = useState('18 Oct 2026');
   const [dueNotes, setDueNotes] = useState('');
+  const [printableData, setPrintableData] = useState<ReceiptData | null>(null);
 
   // Retrieve customer dues
   const dues = useMemo(() => {
@@ -201,13 +203,59 @@ export function CustomerDetailPage() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const statementData: ReceiptData = {
+                id: `STMT-${customer.name.replace(/\s+/g, '').toUpperCase().slice(0, 6)}`,
+                type: 'statement',
+                title: 'Customer Khata Statement & Ledger',
+                date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                dueDate: customer.lastPaymentDate || 'Immediate',
+                customerName: customer.name,
+                customerPhone: customer.phone,
+                items: dues.length > 0
+                  ? dues.map((d) => ({
+                      description: `${d.serviceName} [${d.status}] (${d.date})`,
+                      quantity: d.quantity,
+                      unitPrice: d.unitPrice,
+                      total: d.totalAmount,
+                    }))
+                  : [
+                      {
+                        description: 'Outstanding Balance',
+                        quantity: 1,
+                        unitPrice: customer.outstanding,
+                        total: customer.outstanding,
+                      },
+                    ],
+                subtotal: dues.length > 0 ? dues.reduce((acc, d) => acc + d.totalAmount, 0) : customer.outstanding,
+                tax: 0,
+                total: customer.outstanding,
+                paymentMode: 'Credit / Ledger',
+                status: customer.outstanding > 0 ? 'Pending' : 'Paid',
+                notes: `Official Khata statement for ${customer.name}. Outstanding balance: ${formatINR(customer.outstanding)}.`,
+              };
+              setPrintableData(statementData);
+            }}
+            className="border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold h-9 rounded-xl"
+          >
+            <Printer className="mr-1.5 h-3.5 w-3.5" /> Print Statement
+          </Button>
+
           {customer.outstanding > 0 && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                toast.success('WhatsApp Bill Slip Generated', {
-                  description: `Payment link of ${formatINR(customer.outstanding)} shared with ${customer.name}.`,
+                const cleanPhone = (customer.phone || '').replace(/[^0-9]/g, '');
+                const waPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+                const bName = user?.businessName || 'Cashiko Store';
+                const msg = `Namaste ${customer.name} ji! Polite reminder from ${bName}: you have a pending khata balance of ₹${customer.outstanding.toLocaleString('en-IN')}. Please settle at your convenience. Thank you!`;
+                window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                toast.success('WhatsApp Reminder Dispatched', {
+                  description: `Opened WhatsApp chat for ${customer.name} (${customer.phone}).`,
                 });
               }}
               className={category === 'service'
@@ -392,23 +440,58 @@ export function CustomerDetailPage() {
                       </span>
                     </TableCell>
                     <TableCell className="pr-6 text-right">
-                      {due.status !== 'Paid' ? (
+                      <div className="flex items-center justify-end gap-1.5">
                         <Button
                           size="sm"
-                          variant="outline"
+                          variant="ghost"
                           onClick={() => {
-                            markDuePaid(due.id);
-                            toast.success(`Due settled for ${due.serviceName}!`);
+                            const itemReceipt: ReceiptData = {
+                              id: `DUE-${due.id.slice(0, 6).toUpperCase()}`,
+                              type: category === 'service' ? 'service_order' : 'retail_sale',
+                              title: category === 'service' ? 'Service Due Bill' : 'Credit Sale Slip',
+                              date: due.date,
+                              dueDate: due.dueDate,
+                              customerName: customer.name,
+                              customerPhone: customer.phone,
+                              items: [
+                                {
+                                  description: due.serviceName,
+                                  quantity: due.quantity,
+                                  unitPrice: due.unitPrice,
+                                  total: due.totalAmount,
+                                },
+                              ],
+                              subtotal: due.totalAmount,
+                              tax: 0,
+                              total: due.totalAmount,
+                              paymentMode: 'Credit / Khata',
+                              status: due.status,
+                              notes: due.notes || undefined,
+                            };
+                            setPrintableData(itemReceipt);
                           }}
-                          className="h-7 text-xs px-2.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-300 font-bold"
+                          className="h-7 text-xs px-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium"
                         >
-                          <Check className="h-3 w-3 mr-1" /> Mark Paid
+                          <Printer className="h-3 w-3 mr-1" /> Slip
                         </Button>
-                      ) : (
-                        <span className="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Cleared
-                        </span>
-                      )}
+                        {due.status !== 'Paid' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              markDuePaid(due.id);
+                              toast.success(`Due settled for ${due.serviceName}!`);
+                            }}
+                            className="h-7 text-xs px-2.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-300 font-bold"
+                          >
+                            <Check className="h-3 w-3 mr-1" /> Mark Paid
+                          </Button>
+                        ) : (
+                          <span className="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Cleared
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -616,6 +699,13 @@ export function CustomerDetailPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Printable Thermal & A4 Statement Modal */}
+      <PrintableReceiptModal
+        open={!!printableData}
+        onOpenChange={(open) => !open && setPrintableData(null)}
+        data={printableData}
+      />
 
     </div>
   );

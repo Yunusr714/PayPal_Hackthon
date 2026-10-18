@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { api } from '@/lib/api';
 import {
   productsData as defaultProducts, Product,
   customersData as defaultCustomers, Customer,
@@ -530,21 +531,28 @@ interface BusinessContextType {
     status?: SaleStatus;
     customer?: string;
   }) => Sale;
+  addCustomer: (customer: {
+    name: string;
+    phone: string;
+    email?: string;
+    category?: string;
+  }) => Promise<void>;
+  refreshData: () => Promise<void>;
+  isSyncing: boolean;
 }
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  USER: 'kiranapay_user',
-  SERVICES: 'kiranapay_services',
-  JOBS: 'kiranapay_jobs',
-  PRODUCTS: 'kiranapay_products',
-  SHOP_CUSTOMERS: 'kiranapay_shop_customers',
-  SERVICE_CUSTOMERS: 'kiranapay_service_customers',
-  SHOP_DUES: 'kiranapay_shop_dues',
-  SERVICE_DUES: 'kiranapay_service_dues',
-  SHOP_SALES: 'kiranapay_shop_sales',
-  SERVICE_SALES: 'kiranapay_service_sales',
+  USER: 'cashiko_user',
+  SERVICES: 'cashiko_services',
+  JOBS: 'cashiko_jobs',
+  PRODUCTS: 'cashiko_products',
+  CUSTOMERS: 'cashiko_customers',
+  SHOP_DUES: 'cashiko_shop_dues',
+  SERVICE_DUES: 'cashiko_service_dues',
+  SHOP_SALES: 'cashiko_shop_sales',
+  SERVICE_SALES: 'cashiko_service_sales',
 };
 
 export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -592,26 +600,15 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return defaultProducts;
   });
 
-  // Shop Customers state
-  const [shopCustomers, setShopCustomers] = useState<Customer[]>(() => {
+  // Unified Customers state (backed directly by SQLite database)
+  const [customers, setCustomers] = useState<Customer[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SHOP_CUSTOMERS);
+      const saved = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    return defaultCustomers;
-  });
-
-  // Service Customers state
-  const [serviceCustomers, setServiceCustomers] = useState<Customer[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SERVICE_CUSTOMERS);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
-    }
-    return INITIAL_SERVICE_CUSTOMERS;
+    return [];
   });
 
   // Shop Customer Dues state
@@ -658,6 +655,107 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return INITIAL_SERVICE_SALES;
   });
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Live database refresh function
+  const refreshData = useCallback(async () => {
+    try {
+      setIsSyncing(true);
+      // 1. Fetch Customers
+      const dbCustomers = await api.customers.list();
+      if (Array.isArray(dbCustomers) && dbCustomers.length > 0) {
+        const mapped: Customer[] = dbCustomers.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          phone: c.phone || '',
+          email: c.email || '',
+          category: c.category || 'both',
+          totalPurchases: Number(c.total_purchases) || 0,
+          outstanding: Number(c.outstanding) || 0,
+          behaviour: (c.behaviour as any) || 'Good',
+          riskScore: Number(c.risk_score) || 20,
+          lastVisit: c.last_visit || 'Recent',
+        }));
+        setCustomers(mapped);
+      }
+
+      // 2. Fetch Catalog Items
+      const dbCatalog = await api.catalog.list();
+      if (Array.isArray(dbCatalog) && dbCatalog.length > 0) {
+        const dbServices: ServiceItem[] = dbCatalog
+          .filter((i: any) => i.category_type === 'service')
+          .map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            category: s.sub_category || 'Service',
+            pricingType: s.pricing_type || 'Fixed',
+            price: Number(s.price) || 0,
+            duration: s.duration || '1-2 days',
+            description: s.description || '',
+            isAvailable: s.is_available ?? true,
+          }));
+        if (dbServices.length > 0) setServices(dbServices);
+
+        const dbProducts: Product[] = dbCatalog
+          .filter((i: any) => i.category_type === 'shop')
+          .map((p: any) => ({
+            name: p.name,
+            category: p.sub_category || 'Retail',
+            stock: Number(p.stock_quantity) || 0,
+            unit: 'units',
+            reorderLevel: 5,
+            costPrice: Math.round((Number(p.price) || 0) * 0.75),
+            sellingPrice: Number(p.price) || 0,
+            status: (Number(p.stock_quantity) || 0) <= 0 ? 'Critical' : (Number(p.stock_quantity) || 0) <= 5 ? 'Low Stock' : 'In Stock',
+          }));
+        if (dbProducts.length > 0) setProducts(dbProducts);
+      }
+
+      // 3. Fetch Sales & Dues
+      const dbSales = await api.sales.list();
+      if (Array.isArray(dbSales) && dbSales.length > 0) {
+        const mappedSales: Sale[] = dbSales.map((s: any) => ({
+          id: s.id.startsWith('INV-') ? s.id : `INV-${s.id.slice(0, 6).toUpperCase()}`,
+          customer: s.customer_name,
+          items: s.item_name,
+          amount: Number(s.total_amount) || 0,
+          mode: (s.payment_mode === 'PAYPAL' ? 'PayPal' : s.payment_mode === 'CREDIT' ? 'Credit' : s.payment_mode === 'UPI' ? 'UPI' : 'Cash') as PaymentMode,
+          status: (s.status === 'PAID' || s.status === 'COMPLETED' || s.status === 'DELIVERED' ? 'Paid' : s.status === 'OVERDUE' ? 'Overdue' : 'Pending') as SaleStatus,
+          date: s.date || 'Today',
+          dueDate: s.due_date,
+        }));
+        setShopSales(mappedSales);
+        setServiceSales(mappedSales);
+
+        // Map credit/pending sales to CustomerDueItem
+        const creditSales = dbSales.filter((s: any) => s.payment_mode === 'CREDIT' || s.status === 'PENDING' || s.status === 'OVERDUE');
+        const mappedDues: CustomerDueItem[] = creditSales.map((s: any) => ({
+          id: s.id,
+          customerName: s.customer_name,
+          serviceName: s.item_name,
+          quantity: Number(s.quantity) || 1,
+          unitPrice: Number(s.unit_price) || Number(s.total_amount) || 0,
+          totalAmount: Number(s.total_amount) || 0,
+          dueDate: s.due_date || '18 Oct 2026',
+          date: s.date || 'Today',
+          status: (s.status === 'PAID' || s.status === 'COMPLETED' ? 'Paid' : s.status === 'OVERDUE' ? 'Overdue' : 'Pending') as any,
+          notes: s.notes,
+        }));
+        setShopDues(mappedDues);
+        setServiceDues(mappedDues);
+      }
+    } catch (e) {
+      console.warn('Backend sync initializing or offline:', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
+
+  // Run backend sync on startup
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
+
   // Sync to local storage & set theme attribute on document root
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
@@ -679,12 +777,8 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SHOP_CUSTOMERS, JSON.stringify(shopCustomers));
-  }, [shopCustomers]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SERVICE_CUSTOMERS, JSON.stringify(serviceCustomers));
-  }, [serviceCustomers]);
+    localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+  }, [customers]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHOP_DUES, JSON.stringify(shopDues));
@@ -768,6 +862,19 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       id: `srv-${Date.now()}`,
     };
     setServices((prev) => [created, ...prev]);
+
+    // Persist to SQLite DB
+    api.catalog.create({
+      name: newService.name,
+      category_type: 'service',
+      sub_category: newService.category,
+      pricing_type: newService.pricingType,
+      price: newService.price,
+      duration: newService.duration,
+      description: newService.description,
+      is_available: newService.isAvailable,
+    }).then(() => refreshData()).catch((e) => console.error('Failed to persist service to DB:', e));
+
     return created;
   };
 
@@ -775,10 +882,12 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setServices((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updatedFields } : item))
     );
+    api.catalog.update(id, updatedFields).then(() => refreshData()).catch((e) => console.error(e));
   };
 
   const deleteService = (id: string) => {
     setServices((prev) => prev.filter((item) => item.id !== id));
+    api.catalog.delete(id).then(() => refreshData()).catch((e) => console.error(e));
   };
 
   const addServiceJob = (job: Omit<ServiceJob, 'id'>): ServiceJob => {
@@ -787,6 +896,23 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       id: `JOB-${Math.floor(100 + Math.random() * 900)}`,
     };
     setServiceJobs((prev) => [created, ...prev]);
+
+    // Persist as sale record
+    api.sales.create({
+      customer_name: job.customerName,
+      customer_phone: job.phone,
+      category_type: 'service',
+      item_name: job.serviceName,
+      quantity: 1.0,
+      unit_price: job.amount,
+      total_amount: job.amount,
+      payment_mode: 'CREDIT',
+      status: job.status.toUpperCase(),
+      date: job.date || 'Today',
+      due_date: job.dueDate,
+      notes: job.notes,
+    }).then(() => refreshData()).catch((e) => console.error(e));
+
     return created;
   };
 
@@ -794,14 +920,29 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setServiceJobs((prev) =>
       prev.map((job) => (job.id === id ? { ...job, status } : job))
     );
+    api.sales.update(id, { status: status.toUpperCase() }).then(() => refreshData()).catch((e) => console.error(e));
   };
 
   const addProduct = (prod: Product) => {
     setProducts((prev) => [prod, ...prev]);
+    // Persist to DB
+    api.catalog.create({
+      name: prod.name,
+      category_type: 'shop',
+      sub_category: prod.category,
+      pricing_type: 'Per Unit',
+      price: prod.sellingPrice,
+      stock_quantity: Math.round(prod.stock),
+      description: `Stock: ${prod.stock} ${prod.unit}`,
+    }).then(() => refreshData()).catch((e) => console.error('Failed to persist product to DB:', e));
   };
 
   const deleteProduct = (name: string) => {
     setProducts((prev) => prev.filter((p) => p.name !== name));
+    api.catalog.list('shop').then((items) => {
+      const match = items.find((i) => i.name.toLowerCase() === name.toLowerCase());
+      if (match) api.catalog.delete(match.id).then(() => refreshData());
+    }).catch((e) => console.error(e));
   };
 
   const updateProductStock = (name: string, newStock: number) => {
@@ -816,12 +957,63 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           : p
       )
     );
+    api.catalog.list('shop').then((items) => {
+      const match = items.find((i) => i.name.toLowerCase() === name.toLowerCase());
+      if (match) api.catalog.update(match.id, { stock_quantity: Math.max(0, Math.round(newStock)) }).then(() => refreshData());
+    }).catch((e) => console.error(e));
   };
 
   const isService = user.category === 'service';
-  const activeCustomers = isService ? serviceCustomers : shopCustomers;
+  const activeCustomers = customers;
   const activeDues = isService ? serviceDues : shopDues;
   const activeSales = isService ? serviceSales : shopSales;
+
+  const addCustomer = async (data: {
+    name: string;
+    phone: string;
+    email?: string;
+    category?: string;
+  }) => {
+    const custCat = data.category || (user.category === 'service' ? 'service' : 'shop');
+    const optimistic: Customer = {
+      name: data.name.trim(),
+      phone: data.phone.trim(),
+      email: data.email || `${data.name.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
+      category: custCat,
+      totalPurchases: 0.0,
+      outstanding: 0.0,
+      behaviour: 'Good',
+      riskScore: 20,
+      lastVisit: 'Today',
+    };
+    // Optimistic immediate update so customer never vanishes!
+    setCustomers((prev) => [optimistic, ...prev.filter(c => c.name.toLowerCase() !== data.name.trim().toLowerCase())]);
+
+    try {
+      const created = await api.customers.create({
+        name: data.name.trim(),
+        phone: data.phone.trim(),
+        email: data.email || `${data.name.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
+        category: custCat,
+        total_purchases: 0.0,
+        outstanding: 0.0,
+        credit_limit: 5000.0,
+        behaviour: 'Good',
+        risk_score: 20,
+        last_visit: 'Today',
+      });
+      if (created && created.id) {
+        setCustomers((prev) =>
+          prev.map((c) => (c.name.toLowerCase() === created.name.toLowerCase() ? { ...c, id: created.id } : c))
+        );
+      }
+      await refreshData();
+    } catch (e) {
+      console.error('Failed to create customer in DB:', e);
+      await refreshData();
+      throw e;
+    }
+  };
 
   const addCustomerDue = (due: {
     customerName: string;
@@ -849,96 +1041,57 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     if (isServiceMode) {
       setServiceDues((prev) => [newDue, ...prev]);
-      setServiceCustomers((prev) =>
-        prev.map((c) =>
-          c.name.toLowerCase() === due.customerName.toLowerCase()
-            ? {
-                ...c,
-                outstanding: c.outstanding + due.totalAmount,
-                totalPurchases: c.totalPurchases + due.totalAmount,
-                lastVisit: today,
-              }
-            : c
-        )
-      );
     } else {
       setShopDues((prev) => [newDue, ...prev]);
-      setShopCustomers((prev) =>
-        prev.map((c) =>
-          c.name.toLowerCase() === due.customerName.toLowerCase()
-            ? {
-                ...c,
-                outstanding: c.outstanding + due.totalAmount,
-                totalPurchases: c.totalPurchases + due.totalAmount,
-                lastVisit: today,
-              }
-            : c
-        )
-      );
-
-      // If item is a product in shop mode, deduct inventory stock!
-      setProducts((prev) =>
-        prev.map((p) => {
-          if (p.name.toLowerCase() === due.serviceName.toLowerCase()) {
-            const nextStock = Math.max(0, p.stock - due.quantity);
-            return {
-              ...p,
-              stock: nextStock,
-              status: nextStock <= 0 ? 'Critical' : nextStock <= p.reorderLevel ? 'Low Stock' : 'In Stock',
-            };
-          }
-          return p;
-        })
-      );
     }
+
+    // Persist as a credit sale in the database
+    api.sales.create({
+      customer_name: due.customerName,
+      category_type: user.category,
+      item_name: due.serviceName,
+      quantity: due.quantity,
+      unit_price: due.unitPrice,
+      total_amount: due.totalAmount,
+      payment_mode: 'CREDIT',
+      status: 'PENDING',
+      due_date: due.dueDate || '18 Oct 2026',
+      date: today,
+      notes: due.notes,
+    }).then(() => refreshData()).catch((e) => console.error('Failed to persist customer due to DB:', e));
 
     return newDue;
   };
 
   const markDuePaid = (dueId: string) => {
-    const isServiceMode = user.category === 'service';
-    if (isServiceMode) {
-      const due = serviceDues.find((d) => d.id === dueId);
-      if (!due || due.status === 'Paid') return;
+    // Optimistic local state update
+    setServiceDues((prev) =>
+      prev.map((d) => (d.id === dueId ? { ...d, status: 'Paid' } : d))
+    );
+    setShopDues((prev) =>
+      prev.map((d) => (d.id === dueId ? { ...d, status: 'Paid' } : d))
+    );
 
-      setServiceDues((prev) =>
-        prev.map((d) => (d.id === dueId ? { ...d, status: 'Paid' } : d))
-      );
-
-      setServiceCustomers((prev) =>
-        prev.map((c) =>
-          c.name.toLowerCase() === due.customerName.toLowerCase()
-            ? {
-                ...c,
-                outstanding: Math.max(0, c.outstanding - due.totalAmount),
-              }
-            : c
-        )
-      );
-    } else {
-      const due = shopDues.find((d) => d.id === dueId);
-      if (!due || due.status === 'Paid') return;
-
-      setShopDues((prev) =>
-        prev.map((d) => (d.id === dueId ? { ...d, status: 'Paid' } : d))
-      );
-
-      setShopCustomers((prev) =>
-        prev.map((c) =>
-          c.name.toLowerCase() === due.customerName.toLowerCase()
-            ? {
-                ...c,
-                outstanding: Math.max(0, c.outstanding - due.totalAmount),
-              }
-            : c
-        )
-      );
-    }
+    // Persist to backend
+    api.sales.update(dueId, { status: 'PAID' })
+      .then(() => refreshData())
+      .catch((e) => {
+        console.error('Failed to mark due paid on DB:', e);
+        refreshData();
+      });
   };
 
   const getDuesForCustomer = (customerName: string): CustomerDueItem[] => {
-    const duesList = user.category === 'service' ? serviceDues : shopDues;
-    return duesList.filter((d) => d.customerName.toLowerCase() === customerName.toLowerCase());
+    const combined = [...serviceDues, ...shopDues];
+    const uniqueMap = new Map<string, CustomerDueItem>();
+    for (const d of combined) {
+      if (!uniqueMap.has(d.id)) {
+        uniqueMap.set(d.id, d);
+      }
+    }
+    return Array.from(uniqueMap.values()).filter(
+      (d) => d.customerName.toLowerCase() === customerName.toLowerCase()
+    );
   };
 
   const addSale = (newSale: {
@@ -951,46 +1104,37 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     customer?: string;
   }): Sale => {
     const isServiceSale = user.category === 'service';
-    if (isServiceSale) {
-      const saleItem: Sale = {
-        id: `INV-${2046 + serviceSales.length}`,
-        customer: newSale.customer || 'Client Walk-in',
-        items: `${newSale.productName} (${newSale.quantity} ${newSale.quantity === 1 ? 'unit' : 'units'})`,
-        amount: newSale.totalAmount,
-        mode: newSale.mode || 'Cash',
-        status: newSale.status || 'Paid',
-        date: '14 Oct 2026',
-      };
-      setServiceSales((prev) => [saleItem, ...prev]);
-      return saleItem;
-    } else {
-      const saleItem: Sale = {
-        id: `INV-${1043 + shopSales.length}`,
-        customer: newSale.customer || 'Counter Sale',
-        items: `${newSale.productName} (${newSale.quantity} units)`,
-        amount: newSale.totalAmount,
-        mode: newSale.mode || 'Cash',
-        status: newSale.status || 'Paid',
-        date: '14 Oct 2026',
-      };
-      setShopSales((prev) => [saleItem, ...prev]);
+    const saleId = `INV-${Date.now().toString().slice(-6)}`;
+    const saleItem: Sale = {
+      id: saleId,
+      customer: newSale.customer || (isServiceSale ? 'Client Walk-in' : 'Counter Sale'),
+      items: `${newSale.productName} (${newSale.quantity} units)`,
+      amount: newSale.totalAmount,
+      mode: newSale.mode || 'Cash',
+      status: newSale.status || 'Paid',
+      date: '14 Oct 2026',
+    };
 
-      // Deduct stock from products in shop mode
-      setProducts((prev) =>
-        prev.map((p) => {
-          if (p.name.toLowerCase() === newSale.productName.toLowerCase()) {
-            const nextStock = Math.max(0, p.stock - newSale.quantity);
-            return {
-              ...p,
-              stock: nextStock,
-              status: nextStock <= 0 ? 'Critical' : nextStock <= p.reorderLevel ? 'Low Stock' : 'In Stock',
-            };
-          }
-          return p;
-        })
-      );
-      return saleItem;
+    if (isServiceSale) {
+      setServiceSales((prev) => [saleItem, ...prev]);
+    } else {
+      setShopSales((prev) => [saleItem, ...prev]);
     }
+
+    // Persist to SQLite DB via /api/v1/sales
+    api.sales.create({
+      customer_name: newSale.customer || (isServiceSale ? 'Client Walk-in' : 'Counter Sale'),
+      category_type: user.category,
+      item_name: newSale.productName,
+      quantity: newSale.quantity,
+      unit_price: newSale.unitPrice,
+      total_amount: newSale.totalAmount,
+      payment_mode: newSale.mode.toUpperCase(),
+      status: (newSale.status || (newSale.mode === 'Credit' ? 'PENDING' : 'PAID')).toUpperCase(),
+      date: '14 Oct 2026',
+    }).then(() => refreshData()).catch((e) => console.error('Failed to persist sale to DB:', e));
+
+    return saleItem;
   };
 
   return (
@@ -1021,6 +1165,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         markDuePaid,
         getDuesForCustomer,
         addSale,
+        addCustomer,
+        refreshData,
+        isSyncing,
       }}
     >
       {children}

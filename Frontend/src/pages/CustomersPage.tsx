@@ -1,13 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Search, Plus, BookOpen, ChevronRight, Phone, ArrowUpRight } from 'lucide-react';
+import { Search, Plus, ChevronRight, UserCheck, Scissors, ShoppingBag, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useBusiness } from '@/context/BusinessContext';
 import { formatINR } from '@/data/mock-data';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 function getInitials(name: string): string {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -15,21 +18,88 @@ function getInitials(name: string): string {
 
 export function CustomersPage() {
   const navigate = useNavigate();
-  const { customers } = useBusiness();
+  const { customers, addCustomer, isSyncing, user } = useBusiness();
   const [search, setSearch] = useState('');
   const [riskFilter, setRiskFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // Add Customer modal state
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('');
+  const [newCustEmail, setNewCustEmail] = useState('');
+  const [newCustCategory, setNewCustCategory] = useState<string>(user.category === 'service' ? 'service' : 'shop');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleCreateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustName.trim()) {
+      toast.error('Please enter customer name');
+      return;
+    }
+    if (!newCustPhone.trim()) {
+      toast.error('Please enter customer contact phone');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await addCustomer({
+        name: newCustName.trim(),
+        phone: newCustPhone.trim(),
+        email: newCustEmail.trim() || undefined,
+        category: newCustCategory,
+      });
+      toast.success('Customer Registered Successfully!', {
+        description: `${newCustName} added to the SQLite database.`,
+      });
+      setNewCustName('');
+      setNewCustPhone('');
+      setNewCustEmail('');
+      setIsAddOpen(false);
+    } catch (err: any) {
+      toast.error('Failed to create customer', { description: err.message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     return customers.filter((c) => {
       const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search);
       const risk = c.riskScore < 30 ? 'Low' : c.riskScore < 60 ? 'Medium' : 'High';
       const matchRisk = riskFilter === 'all' || risk === riskFilter;
-      return matchSearch && matchRisk;
+      const custCat = (c.category || 'both').toLowerCase();
+      const matchCat = categoryFilter === 'all' || custCat === categoryFilter.toLowerCase() || custCat === 'both';
+      return matchSearch && matchRisk && matchCat;
     });
-  }, [customers, search, riskFilter]);
+  }, [customers, search, riskFilter, categoryFilter]);
 
   const handleCardClick = (customerName: string) => {
     navigate(`/customers/${encodeURIComponent(customerName)}`);
+  };
+
+  const getCategoryBadge = (category?: string) => {
+    const cat = (category || 'both').toLowerCase();
+    if (cat === 'service') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E6F5F5] text-[#007F7C] border border-[#007F7C]/30">
+          <Scissors className="h-2.5 w-2.5" /> Service
+        </span>
+      );
+    }
+    if (cat === 'shop') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+          <ShoppingBag className="h-2.5 w-2.5" /> Retail
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+        <Sparkles className="h-2.5 w-2.5" /> Both
+      </span>
+    );
   };
 
   return (
@@ -48,8 +118,18 @@ export function CustomersPage() {
               className="h-9 w-full rounded-xl border border-input bg-white pl-9 pr-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-full sm:w-36 h-9 text-xs rounded-xl">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Profiles</SelectItem>
+              <SelectItem value="service">Service Clients</SelectItem>
+              <SelectItem value="shop">Retail Customers</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={riskFilter} onValueChange={setRiskFilter}>
-            <SelectTrigger className="w-full sm:w-40 h-9 text-xs rounded-xl">
+            <SelectTrigger className="w-full sm:w-36 h-9 text-xs rounded-xl">
               <SelectValue placeholder="Risk Level" />
             </SelectTrigger>
             <SelectContent>
@@ -61,12 +141,91 @@ export function CustomersPage() {
           </Select>
         </div>
         <Button
-          onClick={() => toast.success('Customer form opened', { description: 'Add a new customer to directory.' })}
-          className="bg-primary text-primary-foreground hover:bg-primary-hover shrink-0 text-xs font-semibold rounded-xl"
+          onClick={() => {
+            setNewCustCategory(user.category === 'service' ? 'service' : 'shop');
+            setIsAddOpen(true);
+          }}
+          className="bg-primary text-primary-foreground hover:bg-primary-hover shrink-0 text-xs font-semibold rounded-xl shadow-xs"
         >
           <Plus className="h-4 w-4 mr-1.5" /> Add Customer
         </Button>
       </div>
+
+      {/* Add Customer Dialog */}
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900">Add New Customer</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Register a customer to the live SQLite ledger with real-time balance tracking.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateCustomer} className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Customer Full Name *</Label>
+              <Input
+                placeholder="e.g. Ramesh Patel"
+                value={newCustName}
+                onChange={(e) => setNewCustName(e.target.value)}
+                required
+                className="text-xs h-9 rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Phone Number (with WhatsApp) *</Label>
+              <Input
+                placeholder="e.g. +91 98123 45678"
+                value={newCustPhone}
+                onChange={(e) => setNewCustPhone(e.target.value)}
+                required
+                className="text-xs h-9 rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Email Address (Optional)</Label>
+              <Input
+                type="email"
+                placeholder="e.g. ramesh@gmail.com"
+                value={newCustEmail}
+                onChange={(e) => setNewCustEmail(e.target.value)}
+                className="text-xs h-9 rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-slate-700">Customer Category</Label>
+              <Select value={newCustCategory} onValueChange={setNewCustCategory}>
+                <SelectTrigger className="w-full h-9 text-xs rounded-xl">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="service">Service Client (Tailoring / Repair / Services)</SelectItem>
+                  <SelectItem value="shop">Retail Customer (Kirana / Store Sales)</SelectItem>
+                  <SelectItem value="both">Both (Service & Retail)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter className="pt-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddOpen(false)}
+                className="text-xs rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-xl"
+              >
+                {isSubmitting ? 'Saving to DB...' : 'Register Customer'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Customer Cards Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -84,9 +243,12 @@ export function CustomersPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-foreground text-sm truncate group-hover:text-primary transition-colors">
-                      {customer.name}
-                    </p>
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="font-bold text-foreground text-sm truncate group-hover:text-primary transition-colors">
+                        {customer.name}
+                      </p>
+                      {getCategoryBadge(customer.category)}
+                    </div>
                     <p className="text-xs text-muted-foreground">{customer.phone}</p>
                   </div>
                 </div>
@@ -116,8 +278,14 @@ export function CustomersPage() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground">
-          <p className="text-sm font-semibold">No customers found matching your filters.</p>
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-3">
+            <UserCheck className="h-6 w-6" />
+          </div>
+          <h3 className="text-sm font-bold text-slate-800">No customers found</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Try adjusting your search query or category filter.
+          </p>
         </div>
       )}
     </div>

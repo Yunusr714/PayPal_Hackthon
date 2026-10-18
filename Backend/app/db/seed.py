@@ -1,0 +1,263 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.db.models.customer import Customer
+from app.db.models.catalog import CatalogItem
+from app.db.models.sale import SaleRecord
+
+
+async def seed_initial_data(db: AsyncSession) -> None:
+    """Seeds rich initial customers, catalog items, and sales if tables are empty."""
+    # Check customers
+    res = await db.execute(select(Customer).limit(1))
+    if not res.scalar_one_or_none():
+        customers = [
+            Customer(
+                name="Sharma Uncle",
+                phone="+91 98100 12345",
+                email="sharma.uncle@gmail.com",
+                category="shop",
+                total_purchases=2950.0,
+                outstanding=1800.0,
+                credit_limit=5000.0,
+                behaviour="Good",
+                risk_score=35,
+                last_visit="12 Oct 2026",
+            ),
+            Customer(
+                name="Anil Kumar",
+                phone="+91 98100 23456",
+                email="anil.kumar@gmail.com",
+                category="service",
+                total_purchases=1250.0,
+                outstanding=950.0,
+                credit_limit=3000.0,
+                behaviour="Fair",
+                risk_score=68,
+                last_visit="04 Oct 2026",
+            ),
+            Customer(
+                name="Priya Verma",
+                phone="+91 98100 67890",
+                email="priya.verma@example.com",
+                category="service",
+                total_purchases=1450.0,
+                outstanding=750.0,
+                credit_limit=6000.0,
+                behaviour="Excellent",
+                risk_score=18,
+                last_visit="08 Oct 2026",
+            ),
+            Customer(
+                name="Vikas Mehta",
+                phone="+91 98100 34567",
+                email="vikas.mehta@gmail.com",
+                category="both",
+                total_purchases=1400.0,
+                outstanding=700.0,
+                credit_limit=4000.0,
+                behaviour="Good",
+                risk_score=28,
+                last_visit="10 Oct 2026",
+            ),
+            Customer(
+                name="Sunita Devi",
+                phone="+91 98100 45678",
+                email="sunita.devi@outlook.com",
+                category="both",
+                total_purchases=2850.0,
+                outstanding=0.0,
+                credit_limit=5000.0,
+                behaviour="Excellent",
+                risk_score=8,
+                last_visit="11 Oct 2026",
+            ),
+            Customer(
+                name="Mohit Jain",
+                phone="+91 98100 90123",
+                email="mohit.jain@corp.in",
+                category="service",
+                total_purchases=2199.0,
+                outstanding=0.0,
+                credit_limit=5000.0,
+                behaviour="Good",
+                risk_score=22,
+                last_visit="11 Oct 2026",
+            ),
+        ]
+        db.add_all(customers)
+
+    # Check catalog items
+    res_cat = await db.execute(select(CatalogItem).limit(1))
+    if not res_cat.scalar_one_or_none():
+        items = [
+            CatalogItem(
+                name="Men's 2-Piece Suit Stitching",
+                category_type="service",
+                sub_category="Tailoring",
+                pricing_type="Fixed",
+                price=1800.0,
+                duration="3-4 days",
+                description="Custom tailored coat and trousers with lining and interior pockets.",
+                is_available=True,
+            ),
+            CatalogItem(
+                name="Bathroom Pipe Leak Repair & Sealing",
+                category_type="service",
+                sub_category="Plumbing",
+                pricing_type="Fixed",
+                price=450.0,
+                duration="1-2 hours",
+                description="Full inspection of concealed leakages, sealing joint threads & pipe patch.",
+                is_available=True,
+            ),
+            CatalogItem(
+                name="Designer Blouse Stitching & Embroidery",
+                category_type="service",
+                sub_category="Tailoring",
+                pricing_type="Fixed",
+                price=750.0,
+                duration="2 days",
+                description="Custom pattern cuts with piping, tassels, and inner padding.",
+                is_available=True,
+            ),
+            CatalogItem(
+                name="Water Tank & Motor Pump Installation",
+                category_type="service",
+                sub_category="Plumbing",
+                pricing_type="Fixed",
+                price=1250.0,
+                duration="3 hours",
+                description="Complete piping, valve check, union connections, and pressure testing.",
+                is_available=True,
+            ),
+            CatalogItem(
+                name="AC Deep Clean & Jet Pump Wash",
+                category_type="service",
+                sub_category="Appliance Repair",
+                pricing_type="Fixed",
+                price=1199.0,
+                duration="2 hours",
+                description="Indoor filter deep steam wash, outdoor condenser unit pressure rinse.",
+                is_available=True,
+            ),
+            CatalogItem(
+                name="Basmati Rice & Tata Salt Combo",
+                category_type="shop",
+                sub_category="Grocery",
+                pricing_type="Per Unit",
+                price=340.0,
+                stock_quantity=45,
+                description="Premium long grain Daawat Basmati Rice 5kg + Tata Salt 1kg combo pack.",
+                is_available=True,
+            ),
+            CatalogItem(
+                name="Aashirvaad Shudh Chakki Atta (10kg)",
+                category_type="shop",
+                sub_category="Grocery",
+                pricing_type="Per Unit",
+                price=420.0,
+                stock_quantity=30,
+                description="100% whole wheat flour, fiber-rich traditional stone ground chakki atta.",
+                is_available=True,
+            ),
+            CatalogItem(
+                name="Fortune Sunlite Sunflower Oil (2L)",
+                category_type="shop",
+                sub_category="Grocery",
+                pricing_type="Per Unit",
+                price=280.0,
+                stock_quantity=25,
+                description="Refined sunflower oil enriched with Vitamins A & D, easy pour bottle.",
+                is_available=True,
+            ),
+            CatalogItem(
+                name="Amul Butter (500g)",
+                category_type="shop",
+                sub_category="Dairy",
+                pricing_type="Per Unit",
+                price=275.0,
+                stock_quantity=40,
+                description="Pasteurized table butter made from pure fresh cow & buffalo milk.",
+                is_available=True,
+            ),
+        ]
+        db.add_all(items)
+
+    # Check sales records
+    res_sales = await db.execute(select(SaleRecord).limit(1))
+    if not res_sales.scalar_one_or_none():
+        sales = [
+            SaleRecord(
+                customer_name="Sharma Uncle",
+                customer_phone="+91 98100 12345",
+                category_type="service",
+                item_name="Men's 2-Piece Suit Stitching",
+                quantity=1.0,
+                unit_price=1800.0,
+                total_amount=1800.0,
+                payment_mode="CREDIT",
+                status="COMPLETED",
+                due_date="15 Oct 2026",
+                date="12 Oct 2026",
+                notes="Trial done, customer ready for pickup.",
+            ),
+            SaleRecord(
+                customer_name="Anil Kumar",
+                customer_phone="+91 98100 23456",
+                category_type="service",
+                item_name="Bathroom Pipe Leak Repair & Sealing",
+                quantity=1.0,
+                unit_price=450.0,
+                total_amount=450.0,
+                payment_mode="CREDIT",
+                status="SCHEDULED",
+                due_date="16 Oct 2026",
+                date="14 Oct 2026",
+                notes="Visit scheduled for 4:00 PM at sector 14.",
+            ),
+            SaleRecord(
+                customer_name="Sunita Devi",
+                customer_phone="+91 98100 45678",
+                category_type="service",
+                item_name="Water Tank & Motor Pump Installation",
+                quantity=1.0,
+                unit_price=1250.0,
+                total_amount=1250.0,
+                payment_mode="UPI",
+                status="DELIVERED",
+                due_date="12 Oct 2026",
+                date="11 Oct 2026",
+                notes="Payment collected via UPI.",
+            ),
+            SaleRecord(
+                customer_name="Mohit Jain",
+                customer_phone="+91 98100 90123",
+                category_type="service",
+                item_name="AC Deep Clean & Jet Pump Wash",
+                quantity=1.0,
+                unit_price=1199.0,
+                total_amount=1199.0,
+                payment_mode="PAYPAL",
+                status="IN_PROGRESS",
+                due_date="16 Oct 2026",
+                date="13 Oct 2026",
+                notes="Split AC 1.5 ton in master bedroom.",
+            ),
+            SaleRecord(
+                customer_name="Sharma Uncle",
+                customer_phone="+91 98100 12345",
+                category_type="shop",
+                item_name="Basmati Rice & Tata Salt Combo",
+                quantity=1.0,
+                unit_price=340.0,
+                total_amount=340.0,
+                payment_mode="CREDIT",
+                status="PENDING",
+                due_date="18 Oct 2026",
+                date="13 Oct 2026",
+                notes="Weekly grocery store credit billing.",
+            ),
+        ]
+        db.add_all(sales)
+
+    await db.commit()

@@ -20,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { PrintableReceiptModal, ReceiptData } from '@/components/shared/PrintableReceiptModal';
 import { useBusiness } from '@/context/BusinessContext';
 import { formatINR, PaymentMode, Sale } from '@/data/mock-data';
 
@@ -53,6 +54,7 @@ export function SalesPage() {
 
   // Receipt Modal State
   const [selectedReceipt, setSelectedReceipt] = useState<Sale | null>(null);
+  const [printableData, setPrintableData] = useState<ReceiptData | null>(null);
 
   // Active product details (Shop mode)
   const activeProduct = useMemo(() => {
@@ -101,6 +103,30 @@ export function SalesPage() {
     }
     setIsNewSaleOpen(true);
   };
+
+  const buildReceiptDataFromSale = (sale: Sale): ReceiptData => ({
+    id: sale.id,
+    type: isService ? 'service_order' : 'retail_sale',
+    title: isService ? 'Service Job & Work Order Receipt' : 'Retail POS Cash Memo',
+    date: sale.date,
+    customerName: sale.customer === 'Counter Sale' ? 'Counter Walk-in' : sale.customer,
+    items: [
+      {
+        description: sale.items,
+        quantity: 1,
+        unitPrice: sale.amount,
+        total: sale.amount,
+      },
+    ],
+    subtotal: sale.amount,
+    tax: 0,
+    total: sale.amount,
+    paymentMode: sale.mode,
+    status: sale.status,
+    notes: isService
+      ? 'Zero Inventory Model: Quality workmanship & service guaranteed.'
+      : 'Goods once sold cannot be returned. Thank you for your business!',
+  });
 
   // Submit sale/invoice
   const handleSaveSale = (e: React.FormEvent) => {
@@ -390,14 +416,24 @@ export function SalesPage() {
                     <TableCell><StatusBadge status={sale.status} /></TableCell>
                     <TableCell className="text-xs text-muted-foreground">{sale.date}</TableCell>
                     <TableCell className="pr-6 text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelectedReceipt(sale)}
-                        className="h-7 text-xs text-primary font-semibold hover:bg-accent px-2"
-                      >
-                        Receipt
-                      </Button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedReceipt(sale)}
+                          className="h-7 text-xs text-slate-600 font-medium hover:bg-slate-100 px-2"
+                        >
+                          <Eye className="h-3 w-3 mr-1" /> View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPrintableData(buildReceiptDataFromSale(sale))}
+                          className="h-7 text-xs text-primary border-primary/30 font-semibold hover:bg-primary/5 px-2"
+                        >
+                          <Printer className="h-3 w-3 mr-1" /> Print Slip
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -763,29 +799,53 @@ export function SalesPage() {
                 )}
               </div>
 
-              <DialogFooter className="pt-2 flex justify-between sm:justify-between items-center">
+              <DialogFooter className="pt-2 flex flex-col sm:flex-row gap-2 justify-between items-center">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedReceipt(null)}
-                  className="text-xs"
+                  className="text-xs w-full sm:w-auto"
                 >
                   Close
                 </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => toast.success('Invoice Sent!', { description: `Receipt for ${selectedReceipt.id} shared via WhatsApp / SMS.` })}
-                  className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold"
-                >
-                  <Printer className="mr-1.5 h-3.5 w-3.5" /> Share / Print Receipt
-                </Button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const msg = `Namaste ${selectedReceipt.customer}! Here is your Cashiko receipt for ${selectedReceipt.id}: ${selectedReceipt.items}. Total amount: ₹${selectedReceipt.amount.toLocaleString('en-IN')}. Mode: ${selectedReceipt.mode} (${selectedReceipt.status}). Thank you for your business!`;
+                      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                    }}
+                    className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                  >
+                    Share WhatsApp
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      setPrintableData(buildReceiptDataFromSale(selectedReceipt));
+                      setSelectedReceipt(null);
+                    }}
+                    className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold"
+                  >
+                    <Printer className="mr-1.5 h-3.5 w-3.5" /> Print Bill / Thermal Slip
+                  </Button>
+                </div>
               </DialogFooter>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modern Printable Thermal & A4 Receipt Modal */}
+      <PrintableReceiptModal
+        open={!!printableData}
+        onOpenChange={(open) => !open && setPrintableData(null)}
+        data={printableData}
+      />
 
     </div>
   );

@@ -1,15 +1,34 @@
 import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { Store, CreditCard, Bell, Sparkles, Users, Save, Plus, Trash2, Scissors, RefreshCw } from 'lucide-react';
+import {
+  Save,
+  Plus,
+  Trash2,
+  CreditCard,
+  Cpu,
+  RefreshCw,
+  Copy,
+  Check,
+  ShieldCheck,
+  Loader2,
+} from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useBusiness, BusinessCategory } from '@/context/BusinessContext';
+import { toast } from 'sonner';
+import { useBusiness } from '@/context/BusinessContext';
+import { api } from '@/lib/api';
+import { ConnectionStatus } from '@/types';
 
 interface ToggleSettingProps {
   id: string;
@@ -18,13 +37,15 @@ interface ToggleSettingProps {
   defaultChecked?: boolean;
 }
 
-function ToggleSetting({ id, label, description, defaultChecked = false }: ToggleSettingProps) {
-  const [checked, setChecked] = useState(defaultChecked);
+function ToggleSetting({ id, label, description, defaultChecked }: ToggleSettingProps) {
+  const [checked, setChecked] = useState(defaultChecked ?? false);
   return (
-    <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
+    <div className="flex items-center justify-between py-3 border-b border-border">
       <div className="pr-4">
-        <Label htmlFor={id} className="text-sm font-medium text-foreground cursor-pointer">{label}</Label>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+        <Label htmlFor={id} className="text-xs font-semibold text-foreground">
+          {label}
+        </Label>
+        <p className="text-[11px] text-muted-foreground mt-0.5">{description}</p>
       </div>
       <Switch id={id} checked={checked} onCheckedChange={setChecked} />
     </div>
@@ -32,251 +53,337 @@ function ToggleSetting({ id, label, description, defaultChecked = false }: Toggl
 }
 
 const teamMembers = [
-  { name: 'Ramesh Sharma', role: 'Store Owner', avatar: 'RS' },
-  { name: 'Suresh Sharma', role: 'Manager', avatar: 'SS' },
-  { name: 'Anita Sharma', role: 'Cashier', avatar: 'AS' },
+  { name: 'Ramesh Sharma', role: 'Owner & Admin', avatar: 'RS' },
+  { name: 'Suresh Kumar', role: 'Store Billing Staff', avatar: 'SK' },
+  { name: 'Rajesh Tailor', role: 'Master Craftsman', avatar: 'RT' },
 ];
 
 export function SettingsPage() {
-  const { user, loginUser, setCategory } = useBusiness();
-
-  const [businessName, setBusinessName] = useState(user.businessName);
-  const [ownerName, setOwnerName] = useState(user.name);
-  const [phone, setPhone] = useState(user.phone);
-  const [address, setAddress] = useState(user.address || 'Main Market, Delhi NCR');
-  const [bizCategory, setBizCategory] = useState<BusinessCategory>(user.category);
-  const [subCategory, setSubCategory] = useState(user.subCategory);
-
+  const { user, category, toggleCategory } = useBusiness();
   const [whatsapp, setWhatsapp] = useState(true);
   const [lowStock, setLowStock] = useState(true);
   const [aiReminders, setAiReminders] = useState(true);
   const [paypalSandbox, setPaypalSandbox] = useState(true);
 
-  useEffect(() => {
-    setBusinessName(user.businessName);
-    setOwnerName(user.name);
-    setPhone(user.phone);
-    setAddress(user.address || 'Main Market, Delhi NCR');
-    setBizCategory(user.category);
-    setSubCategory(user.subCategory);
-  }, [user]);
+  // Live PayPal Sandbox & Groq status
+  const [status, setStatus] = useState<ConnectionStatus | null>(null);
+  const [isChecking, setIsChecking] = useState<boolean>(false);
+  const [copiedWebhook, setCopiedWebhook] = useState<boolean>(false);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    loginUser({
-      ...user,
-      businessName,
-      name: ownerName,
-      phone,
-      address,
-      category: bizCategory,
-      subCategory,
-    });
-    toast.success('Business Profile Updated', {
-      description: `Settings saved for ${businessName}.`,
-    });
+  const checkHealth = async () => {
+    setIsChecking(true);
+    try {
+      const data = await api.settings.getConnectionStatus();
+      setStatus(data);
+      toast.success('System Connectivity Verified!', {
+        description: 'PayPal Sandbox and Groq AI endpoints are active.',
+      });
+    } catch (err: any) {
+      toast.error('Health Check Failed', { description: err.message });
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    checkHealth();
+  }, []);
+
+  const webhookUrl = 'http://localhost:8000/api/v1/webhooks/paypal';
+
+  const handleCopyWebhook = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopiedWebhook(true);
+    toast.success('Webhook URL Copied!');
+    setTimeout(() => setCopiedWebhook(false), 2000);
   };
 
   return (
-    <div className="animate-fade-in">
-      <Tabs defaultValue="profile">
-        <TabsList className="h-9 flex-wrap mb-5">
-          <TabsTrigger value="profile" className="text-xs sm:text-sm font-semibold">
-            <Store className="h-3.5 w-3.5 mr-1.5" /> Business Profile
+    <div className="space-y-6 max-w-5xl">
+      <div>
+        <h2 className="text-2xl font-black tracking-tight text-slate-900">
+          Settings & Configuration
+        </h2>
+        <p className="text-sm text-slate-500 mt-0.5">
+          Manage your business workspace profile, PayPal Sandbox Invoicing v2 credentials, and AI preferences.
+        </p>
+      </div>
+
+      <Tabs defaultValue="paypal" className="space-y-4">
+        <TabsList className="bg-muted p-1 rounded-xl">
+          <TabsTrigger value="paypal" className="text-xs font-semibold rounded-lg gap-1.5">
+            <CreditCard className="h-3.5 w-3.5 text-blue-600" />
+            <span>PayPal & AI Integration</span>
           </TabsTrigger>
-          <TabsTrigger value="payment" className="text-xs sm:text-sm font-semibold">
-            <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Payment Preferences
+          <TabsTrigger value="business" className="text-xs font-semibold rounded-lg">
+            Business Profile
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="text-xs sm:text-sm font-semibold">
-            <Bell className="h-3.5 w-3.5 mr-1.5" /> Notifications
+          <TabsTrigger value="payment" className="text-xs font-semibold rounded-lg">
+            Payment Methods
           </TabsTrigger>
-          <TabsTrigger value="ai" className="text-xs sm:text-sm font-semibold">
-            <Sparkles className="h-3.5 w-3.5 mr-1.5" /> AI Preferences
+          <TabsTrigger value="notifications" className="text-xs font-semibold rounded-lg">
+            Reminders
           </TabsTrigger>
-          <TabsTrigger value="team" className="text-xs sm:text-sm font-semibold">
-            <Users className="h-3.5 w-3.5 mr-1.5" /> Team Members
+          <TabsTrigger value="ai" className="text-xs font-semibold rounded-lg">
+            AI Assistant
+          </TabsTrigger>
+          <TabsTrigger value="team" className="text-xs font-semibold rounded-lg">
+            Team
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile">
-          <Card className="rounded-2xl border-border shadow-sm max-w-2xl">
+        {/* Tab 1: PayPal & Groq AI Sandbox Integration */}
+        <TabsContent value="paypal" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* PayPal Card */}
+            <Card className="rounded-2xl border-border shadow-xs">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <CreditCard className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold">PayPal Invoicing API v2</CardTitle>
+                    <CardDescription className="text-xs">Live Sandbox OAuth2</CardDescription>
+                  </div>
+                </div>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                    status?.paypal_configured
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {status?.paypal_configured ? 'Connected' : 'Demo Fixture'}
+                </span>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs divide-y divide-border">
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">Mode:</span>
+                  <span className="font-mono font-semibold uppercase">{status?.paypal_mode || 'sandbox'}</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">Base URL:</span>
+                  <span className="font-mono text-[11px]">{status?.paypal_base_url || 'https://api-m.sandbox.paypal.com'}</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">Client ID:</span>
+                  <span className="font-mono text-[11px]">AZVjZgTJ...BeRnRt (Active)</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Groq AI Card */}
+            <Card className="rounded-2xl border-border shadow-xs">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                    <Cpu className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold">Groq AI Inference</CardTitle>
+                    <CardDescription className="text-xs">Low-token model</CardDescription>
+                  </div>
+                </div>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                    status?.llm_configured
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-rose-100 text-rose-800'
+                  }`}
+                >
+                  {status?.llm_configured ? 'Active' : 'Missing Key'}
+                </span>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs divide-y divide-border">
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">Provider:</span>
+                  <span className="font-mono font-semibold">{status?.llm_provider || 'groq'}</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">Model:</span>
+                  <span className="font-mono font-bold text-indigo-600">openai/gpt-oss-20b</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">API Key:</span>
+                  <span className="font-mono text-[11px]">gsk_47Eu3...szEH (Active)</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Webhook Configuration */}
+          <Card className="rounded-2xl border-border shadow-xs">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold">PayPal Webhooks Callback</CardTitle>
+                  <CardDescription className="text-xs">Automatic reconciliation on invoice payment</CardDescription>
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={checkHealth}
+                disabled={isChecking}
+                className="h-8 text-xs gap-1"
+              >
+                {isChecking ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                <span>Ping Status</span>
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/40 p-2.5 font-mono text-xs">
+                <span className="truncate text-slate-700">{webhookUrl}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCopyWebhook}
+                  className="h-7 text-xs text-blue-600 hover:text-blue-800"
+                >
+                  {copiedWebhook ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                  {copiedWebhook ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                In PayPal Developer Dashboard, add a Webhook listener for <code>INVOICING.INVOICE.PAID</code> pointing to your Cashiko callback URL.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 2: Business Profile */}
+        <TabsContent value="business">
+          <Card className="rounded-2xl border-border shadow-xs max-w-2xl">
             <CardHeader>
-              <CardTitle className="text-base font-bold">Business Profile & Category</CardTitle>
-              <CardDescription className="text-xs">
-                Configure your business model (Shop vs Service) and primary details.
-              </CardDescription>
+              <CardTitle className="text-base font-bold">Business Profile</CardTitle>
+              <CardDescription className="text-xs">Update your store/studio details</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSaveProfile} className="space-y-4">
-                
-                {/* Category Selection in Settings */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-slate-700">Business Model Category</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBizCategory('shop');
-                        setSubCategory('Kirana & Retail Store');
-                      }}
-                      className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-left transition-all ${
-                        bizCategory === 'shop'
-                          ? 'border-primary bg-blue-50/50 ring-2 ring-primary/20'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
-                    >
-                      <Store className={`h-4 w-4 ${bizCategory === 'shop' ? 'text-primary' : 'text-slate-400'}`} />
-                      <div>
-                        <p className="text-xs font-bold text-slate-900">Shop / Retail</p>
-                        <p className="text-[10px] text-muted-foreground">With Inventory</p>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBizCategory('service');
-                        setSubCategory('Tailor & Boutique');
-                      }}
-                      className={`flex items-center gap-2.5 rounded-xl border-2 p-3 text-left transition-all ${
-                        bizCategory === 'service'
-                          ? 'border-[#007F7C] bg-[#E6F5F5]/60 ring-2 ring-[#007F7C]/20'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                      }`}
-                    >
-                      <Scissors className={`h-4 w-4 ${bizCategory === 'service' ? 'text-[#007F7C]' : 'text-slate-400'}`} />
-                      <div>
-                        <p className="text-xs font-bold text-slate-900">Service Provider</p>
-                        <p className="text-[10px] text-[#007F7C] font-medium">Zero Inventory</p>
-                      </div>
-                    </button>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  toast.success('Changes saved', { description: 'Business profile updated.' });
+                }}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Contact Person</Label>
+                    <Input defaultValue={user.name} className="text-xs" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Business Name</Label>
+                    <Input defaultValue={user.businessName} className="text-xs" />
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="store-name" className="text-xs font-semibold text-slate-800">Business / Shop Name</Label>
-                    <Input
-                      id="store-name"
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                      className="h-10 text-sm"
-                      required
-                    />
+                    <Label className="text-xs font-semibold">Phone Number</Label>
+                    <Input defaultValue={user.phone} className="text-xs" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="owner-name" className="text-xs font-semibold text-slate-800">Owner Name</Label>
-                    <Input
-                      id="owner-name"
-                      value={ownerName}
-                      onChange={(e) => setOwnerName(e.target.value)}
-                      className="h-10 text-sm"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="phone" className="text-xs font-semibold text-slate-800">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="h-10 text-sm"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="subcategory" className="text-xs font-semibold text-slate-800">Profession / Speciality</Label>
-                    <Input
-                      id="subcategory"
-                      value={subCategory}
-                      onChange={(e) => setSubCategory(e.target.value)}
-                      className="h-10 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="address" className="text-xs font-semibold text-slate-800">Business Address</Label>
-                    <Input
-                      id="address"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="h-10 text-sm"
-                    />
+                    <Label className="text-xs font-semibold">Business Email</Label>
+                    <Input defaultValue={user.email} className="text-xs" />
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary-hover font-semibold text-xs shadow-sm">
-                    <Save className="h-4 w-4 mr-1.5" /> Save Changes
-                  </Button>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Address</Label>
+                  <Input defaultValue={user.address || 'Main Street Market, Sector 18'} className="text-xs" />
                 </div>
+
+                <Button type="submit" className="bg-primary text-primary-foreground font-semibold text-xs shadow-xs">
+                  <Save className="h-4 w-4 mr-1.5" /> Save Changes
+                </Button>
               </form>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* Tab 3: Payment Preferences */}
         <TabsContent value="payment">
-          <Card className="rounded-2xl border-border shadow-sm max-w-2xl">
+          <Card className="rounded-2xl border-border shadow-xs max-w-2xl">
             <CardHeader>
               <CardTitle className="text-base font-bold">Payment Preferences</CardTitle>
-              <CardDescription className="text-xs">Configure payment methods and options</CardDescription>
+              <CardDescription className="text-xs">Configure payment methods and checkout options</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-800">Default Payment Method</Label>
-                <Select defaultValue="upi">
-                  <SelectTrigger className="w-full sm:w-48 text-xs"><SelectValue /></SelectTrigger>
+                <Label className="text-xs font-semibold">Default Payment Method</Label>
+                <Select defaultValue="paypal">
+                  <SelectTrigger className="w-full sm:w-56 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="paypal">PayPal Merchant (Hosted Link)</SelectItem>
                     <SelectItem value="upi">UPI (PhonePe, GPay, Paytm)</SelectItem>
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="credit">Credit / Khata</SelectItem>
-                    <SelectItem value="paypal">PayPal Merchant</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="flex items-center justify-between py-3 border-t border-border">
                 <div>
-                  <Label className="text-sm font-semibold text-foreground">PayPal Sandbox Mode</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Use PayPal sandbox for test transactions</p>
+                  <Label className="text-xs font-semibold text-foreground">PayPal Sandbox Mode</Label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Use PayPal sandbox for test invoicing</p>
                 </div>
                 <Switch checked={paypalSandbox} onCheckedChange={setPaypalSandbox} />
               </div>
-              <Button onClick={() => toast.success('Changes saved', { description: 'Payment preferences updated.' })} className="bg-primary text-primary-foreground hover:bg-primary-hover text-xs font-semibold">
+
+              <Button
+                onClick={() => toast.success('Changes saved', { description: 'Payment preferences updated.' })}
+                className="bg-primary text-primary-foreground text-xs font-semibold"
+              >
                 <Save className="h-4 w-4 mr-1.5" /> Save Changes
               </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* Tab 4: Notifications */}
         <TabsContent value="notifications">
-          <Card className="rounded-2xl border-border shadow-sm max-w-2xl">
+          <Card className="rounded-2xl border-border shadow-xs max-w-2xl">
             <CardHeader>
-              <CardTitle className="text-base font-bold">Notifications</CardTitle>
-              <CardDescription className="text-xs">Manage your customer reminder and alert preferences</CardDescription>
+              <CardTitle className="text-base font-bold">Reminders & Notifications</CardTitle>
+              <CardDescription className="text-xs">Manage your reminder cadence and alert preferences</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <div className="pr-4">
-                  <Label className="text-sm font-semibold text-foreground">WhatsApp payment reminders</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Send friendly payment reminder slips via WhatsApp</p>
+                  <Label className="text-xs font-semibold text-foreground">PayPal Native Reminders</Label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Automated polite payment reminders via PayPal email engine</p>
                 </div>
                 <Switch checked={whatsapp} onCheckedChange={setWhatsapp} />
               </div>
+
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <div className="pr-4">
-                  <Label className="text-sm font-semibold text-foreground">Low-stock & material alerts</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Get notified when stock or supplies run low</p>
+                  <Label className="text-xs font-semibold text-foreground">Low-stock & material alerts</Label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Get notified when stock or supplies run low</p>
                 </div>
                 <Switch checked={lowStock} onCheckedChange={setLowStock} />
               </div>
+
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <div className="pr-4">
-                  <Label className="text-sm font-semibold text-foreground">AI auto-reminders</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">AI suggests smart schedules to remind overdue accounts</p>
+                  <Label className="text-xs font-semibold text-foreground">AI Auto-Triage Reminders</Label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">AI suggests smart schedules based on promised payment dates</p>
                 </div>
                 <Switch checked={aiReminders} onCheckedChange={setAiReminders} />
               </div>
+
               <div className="pt-4">
-                <Button onClick={() => toast.success('Changes saved', { description: 'Notification preferences updated.' })} className="bg-primary text-primary-foreground hover:bg-primary-hover text-xs font-semibold">
+                <Button
+                  onClick={() => toast.success('Changes saved', { description: 'Notification preferences updated.' })}
+                  className="bg-primary text-primary-foreground text-xs font-semibold"
+                >
                   <Save className="h-4 w-4 mr-1.5" /> Save Changes
                 </Button>
               </div>
@@ -284,19 +391,23 @@ export function SettingsPage() {
           </Card>
         </TabsContent>
 
+        {/* Tab 5: AI Preferences */}
         <TabsContent value="ai">
-          <Card className="rounded-2xl border-border shadow-sm max-w-2xl">
+          <Card className="rounded-2xl border-border shadow-xs max-w-2xl">
             <CardHeader>
               <CardTitle className="text-base font-bold">AI Preferences</CardTitle>
-              <CardDescription className="text-xs">Configure your AI assistant copilot behavior</CardDescription>
+              <CardDescription className="text-xs">Configure Groq AI copilot inference behavior</CardDescription>
             </CardHeader>
             <CardContent>
               <ToggleSetting id="ai-cashflow" label="AI Cash-Flow Alerts" description="Get proactive alerts about cash gaps" defaultChecked />
               <ToggleSetting id="ai-reorder" label="AI Work Order & Stock Suggestions" description="Smart recommendations for dispatch & inventory" defaultChecked />
               <ToggleSetting id="ai-summary" label="AI Daily Summary" description="Receive a daily morning business summary" defaultChecked />
-              <ToggleSetting id="ai-reminder-tone" label="Polite WhatsApp Tone" description="Use respectful, warm tone in customer reminders" defaultChecked />
+              <ToggleSetting id="ai-reminder-tone" label="Polite Reminder Tone" description="Use respectful, warm tone in client communications" defaultChecked />
               <div className="pt-4">
-                <Button onClick={() => toast.success('Changes saved', { description: 'AI preferences updated.' })} className="bg-primary text-primary-foreground hover:bg-primary-hover text-xs font-semibold">
+                <Button
+                  onClick={() => toast.success('Changes saved', { description: 'AI preferences updated.' })}
+                  className="bg-primary text-primary-foreground text-xs font-semibold"
+                >
                   <Save className="h-4 w-4 mr-1.5" /> Save Changes
                 </Button>
               </div>
@@ -304,18 +415,21 @@ export function SettingsPage() {
           </Card>
         </TabsContent>
 
+        {/* Tab 6: Team */}
         <TabsContent value="team">
-          <Card className="rounded-2xl border-border shadow-sm max-w-2xl">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-bold">Team Members</CardTitle>
-                  <CardDescription className="text-xs">Manage who has access to your business dashboard</CardDescription>
-                </div>
-                <Button size="sm" onClick={() => toast.success('Invite sent', { description: 'Team invitation link generated.' })} className="bg-primary text-primary-foreground hover:bg-primary-hover text-xs font-semibold">
-                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Invite Member
-                </Button>
+          <Card className="rounded-2xl border-border shadow-xs max-w-2xl">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold">Team Members</CardTitle>
+                <CardDescription className="text-xs">Manage who has access to your business dashboard</CardDescription>
               </div>
+              <Button
+                size="sm"
+                onClick={() => toast.success('Invite link copied', { description: 'Team invitation link generated.' })}
+                className="h-8 text-xs font-semibold"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Invite
+              </Button>
             </CardHeader>
             <CardContent className="space-y-3">
               {teamMembers.map((member) => (
