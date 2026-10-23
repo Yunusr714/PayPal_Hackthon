@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useReceivables } from '@/context/ReceivablesContext';
+import { useBusiness } from '@/context/BusinessContext';
 import { Invoice, TriageClassificationResult, TriageDraftResult } from '@/types';
 
 const SAMPLE_REPLIES = [
@@ -49,6 +50,8 @@ export function ReplyTriagePage() {
   const [searchParams] = useSearchParams();
   const urlInvoiceId = searchParams.get('invoiceId');
 
+  const { category } = useBusiness();
+  const isService = category === 'service';
   const { invoices } = useReceivables();
 
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>(urlInvoiceId || '');
@@ -143,30 +146,31 @@ export function ReplyTriagePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Page Header */}
       <div>
-        <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-black tracking-tight text-slate-900">
-            Customer Context & Reply Copilot
-          </h2>
-          <span className="rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5 text-xs font-bold">
-            7-Intent Taxonomy
-          </span>
-        </div>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Triage tricky client emails, detect promise-to-pay dates, and draft polite, context-grounded responses citing balance and PayPal links.
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 leading-tight">
+          Customer Context & Reply Copilot
+        </h1>
+        <p className="text-xs text-zinc-500 font-normal mt-1">
+          7-intent classification, promised date detection & grounded context-aware replies
         </p>
       </div>
 
       {/* Invoice Context Selector */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs">
+      <div className="rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-[#141518] p-4 shadow-xs">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                isService
+                  ? 'bg-[#007F7C]/15 text-[#007F7C] dark:text-[#38D5D2]'
+                  : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+              }`}
+            >
               <FileText className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                 Grounded Invoice Target
               </p>
               {invoices.length > 0 ? (
@@ -177,36 +181,36 @@ export function ReplyTriagePage() {
                     setClassification(null);
                     setDraftResult(null);
                   }}
-                  className="mt-1 font-bold text-sm text-slate-900 bg-transparent border-0 p-0 focus:ring-0 cursor-pointer"
+                  className="mt-1 font-bold text-sm text-slate-900 dark:text-zinc-100 bg-transparent border-0 p-0 focus:ring-0 cursor-pointer"
                 >
                   {invoices.map((inv) => (
-                    <option key={inv.id} value={inv.id}>
+                    <option key={inv.id} value={inv.id} className="dark:bg-[#18191D] dark:text-zinc-100">
                       {inv.recipient_name} — ${inv.total.toFixed(2)} {inv.currency} ({inv.status}) [
                       {inv.paypal_invoice_number || inv.id.substring(0, 8)}]
                     </option>
                   ))}
                 </select>
               ) : (
-                <p className="text-sm text-slate-400">No invoices available</p>
+                <p className="text-sm text-slate-400 dark:text-zinc-500">No invoices available</p>
               )}
             </div>
           </div>
 
           {selectedInvoice && (
-            <div className="flex items-center gap-3 text-xs bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+            <div className="flex items-center gap-3 text-xs bg-slate-50 dark:bg-[#18191D] rounded-xl p-2.5 border border-slate-100 dark:border-zinc-800">
               <div>
-                <span className="text-slate-400">Recipient:</span>{' '}
-                <span className="font-semibold text-slate-700">{selectedInvoice.recipient_email}</span>
+                <span className="text-slate-400 dark:text-zinc-500">Recipient:</span>{' '}
+                <span className="font-semibold text-slate-700 dark:text-zinc-200">{selectedInvoice.recipient_email}</span>
               </div>
-              <div className="h-3 w-px bg-slate-300" />
+              <div className="h-3 w-px bg-slate-300 dark:bg-zinc-700" />
               <div>
-                <span className="text-slate-400">Due:</span>{' '}
-                <span className="font-semibold text-slate-700">{selectedInvoice.due_date}</span>
+                <span className="text-slate-400 dark:text-zinc-500">Due:</span>{' '}
+                <span className="font-semibold text-slate-700 dark:text-zinc-200">{selectedInvoice.due_date}</span>
               </div>
-              <div className="h-3 w-px bg-slate-300" />
+              <div className="h-3 w-px bg-slate-300 dark:bg-zinc-700" />
               <div>
-                <span className="text-slate-400">Status:</span>{' '}
-                <span className="font-bold text-blue-600">{selectedInvoice.status}</span>
+                <span className="text-slate-400 dark:text-zinc-500">Status:</span>{' '}
+                <span className={`font-bold ${isService ? 'text-[#007F7C] dark:text-[#38D5D2]' : 'text-blue-600 dark:text-blue-400'}`}>{selectedInvoice.status}</span>
               </div>
             </div>
           )}
@@ -217,11 +221,11 @@ export function ReplyTriagePage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left: Client Inbound Message */}
         <div className="lg:col-span-6 space-y-4">
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
+          <div className="rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-[#141518] p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageSquareQuote className="h-5 w-5 text-indigo-600" />
-                <h3 className="font-bold text-slate-900">Inbound Customer Message</h3>
+                <MessageSquareQuote className={`h-5 w-5 ${isService ? 'text-[#007F7C] dark:text-[#38D5D2]' : 'text-blue-600 dark:text-blue-400'}`} />
+                <h3 className="font-bold text-slate-900 dark:text-zinc-100">Inbound Customer Message</h3>
               </div>
               <span className="text-[11px] font-medium text-slate-400">Triage Step 1</span>
             </div>
@@ -231,7 +235,11 @@ export function ReplyTriagePage() {
               value={customerReply}
               onChange={(e) => setCustomerReply(e.target.value)}
               placeholder="Paste email, SMS, or client chat response here..."
-              className="resize-none font-sans text-sm border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20"
+              className={`resize-none font-sans text-sm border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#18191D] text-foreground placeholder:text-muted-foreground ${
+                isService
+                  ? 'focus:border-[#007F7C] focus:ring-[#007F7C]/20'
+                  : 'focus:border-blue-500 focus:ring-blue-500/20'
+              }`}
             />
 
             {/* Realistic Sample Replies */}
@@ -245,7 +253,11 @@ export function ReplyTriagePage() {
                     key={idx}
                     type="button"
                     onClick={() => handleApplySampleReply(sample.text)}
-                    className="rounded-lg border border-slate-200 bg-slate-50/70 hover:bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors"
+                    className={`rounded-lg border border-slate-200 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-800/70 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-zinc-200 transition-colors ${
+                      isService
+                        ? 'hover:bg-[#007F7C]/10 hover:border-[#007F7C]/40 hover:text-[#007F7C] dark:hover:text-[#38D5D2]'
+                        : 'hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-300'
+                    }`}
                   >
                     {sample.label}
                   </button>
@@ -256,7 +268,11 @@ export function ReplyTriagePage() {
             <Button
               onClick={handleClassify}
               disabled={isClassifying || !customerReply.trim() || !selectedInvoice}
-              className="w-full gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-xs"
+              className={`w-full gap-2 text-white font-semibold shadow-xs ${
+                isService
+                  ? 'bg-[#007F7C] hover:bg-[#006663]'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
               {isClassifying ? (
                 <>
@@ -274,33 +290,53 @@ export function ReplyTriagePage() {
 
           {/* Classification Result Card */}
           {classification && (
-            <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/40 p-5 shadow-xs space-y-4">
+            <div
+              className={`rounded-2xl border p-5 shadow-xs space-y-4 ${
+                isService
+                  ? 'border-[#007F7C]/30 bg-[#007F7C]/5 dark:bg-[#007F7C]/15'
+                  : 'border-blue-200/80 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/30'
+              }`}
+            >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-indigo-900 uppercase tracking-wider">
+                <span
+                  className={`text-xs font-bold uppercase tracking-wider ${
+                    isService ? 'text-[#007F7C] dark:text-[#38D5D2]' : 'text-blue-900 dark:text-blue-200'
+                  }`}
+                >
                   Intent Classification
                 </span>
-                <span className="rounded-full bg-indigo-100 text-indigo-800 px-2 py-0.5 text-xs font-bold">
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                    isService
+                      ? 'bg-[#007F7C]/20 text-[#007F7C] dark:text-[#38D5D2]'
+                      : 'bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300'
+                  }`}
+                >
                   {(classification.confidence * 100).toFixed(0)}% Confidence
                 </span>
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="rounded-xl bg-indigo-600 text-white px-3 py-1 text-xs font-black tracking-wide">
+                <span
+                  className={`rounded-xl text-white px-3 py-1 text-xs font-black tracking-wide ${
+                    isService ? 'bg-[#007F7C] dark:bg-[#009995]' : 'bg-blue-600 dark:bg-blue-500'
+                  }`}
+                >
                   {classification.intent}
                 </span>
-                <span className="text-xs text-slate-600 font-medium">
+                <span className="text-xs text-slate-600 dark:text-zinc-300 font-medium">
                   {classification.summary}
                 </span>
               </div>
 
               {/* Promised Payment Date Alert */}
               {classification.promised_payment_date && (
-                <div className="flex items-center gap-2.5 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-                  <Calendar className="h-4 w-4 text-amber-600 shrink-0" />
+                <div className="flex items-center gap-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-3 text-xs text-amber-900 dark:text-amber-200">
+                  <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <div>
                     <span className="font-bold">Promised Payment Date Detected:</span>{' '}
                     <span className="font-mono font-semibold">{classification.promised_payment_date}</span>
-                    <p className="text-[11px] text-amber-700 mt-0.5">
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
                       Cashiko recommends snoozing reminders until this date.
                     </p>
                   </div>
@@ -311,7 +347,11 @@ export function ReplyTriagePage() {
                 <Button
                   onClick={handleGenerateDraft}
                   disabled={isDrafting}
-                  className="w-full gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2.5"
+                  className={`w-full gap-2 text-white font-semibold text-xs py-2.5 ${
+                    isService
+                      ? 'bg-[#007F7C] hover:bg-[#006663]'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
                   {isDrafting ? (
                     <>
@@ -320,7 +360,7 @@ export function ReplyTriagePage() {
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400 dark:text-amber-500" />
                       <span>Draft Grounded Email Response</span>
                     </>
                   )}
@@ -332,11 +372,11 @@ export function ReplyTriagePage() {
 
         {/* Right: Evidence Grounded Draft Response */}
         <div className="lg:col-span-6">
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-[#141518] p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-3">
               <div>
-                <h3 className="font-bold text-slate-900">Grounded Response Draft</h3>
-                <p className="text-xs text-slate-500">
+                <h3 className="font-bold text-slate-900 dark:text-zinc-100">Grounded Response Draft</h3>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">
                   Grounded on live invoice details, balance due, and PayPal checkout link.
                 </p>
               </div>
@@ -346,17 +386,23 @@ export function ReplyTriagePage() {
             {draftResult ? (
               <div className="space-y-4">
                 {/* Subject Line */}
-                <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-100 text-xs">
-                  <span className="text-slate-400 font-semibold">Subject:</span>{' '}
-                  <span className="font-bold text-slate-800">{draftResult.subject}</span>
+                <div className="rounded-xl bg-slate-50 dark:bg-[#18191D] p-2.5 border border-slate-100 dark:border-zinc-800 text-xs">
+                  <span className="text-slate-400 dark:text-zinc-500 font-semibold">Subject:</span>{' '}
+                  <span className="font-bold text-slate-800 dark:text-zinc-100">{draftResult.subject}</span>
                 </div>
 
                 {/* Tone & Rationale Tag */}
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 font-semibold text-[11px]">
+                  <span
+                    className={`rounded-md px-2 py-0.5 font-semibold text-[11px] ${
+                      isService
+                        ? 'bg-[#007F7C]/15 text-[#007F7C] dark:text-[#38D5D2] border border-[#007F7C]/30'
+                        : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50'
+                    }`}
+                  >
                     Tone: {draftResult.tone}
                   </span>
-                  <span className="text-slate-500 text-[11px]">
+                  <span className="text-slate-500 dark:text-zinc-400 text-[11px]">
                     Rationale: {draftResult.rationale}
                   </span>
                 </div>
@@ -366,25 +412,29 @@ export function ReplyTriagePage() {
                   rows={10}
                   value={editedDraft}
                   onChange={(e) => setEditedDraft(e.target.value)}
-                  className="font-sans text-xs leading-relaxed border-slate-200 bg-slate-50/30"
+                  className="font-sans text-xs leading-relaxed border-slate-200 dark:border-zinc-800 bg-slate-50/30 dark:bg-[#18191D] text-foreground"
                 />
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-zinc-800">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={handleCopyDraft}
-                    className="w-full sm:w-auto gap-1.5 text-xs"
+                    className="w-full sm:w-auto gap-1.5 text-xs dark:border-zinc-800 dark:hover:bg-zinc-800"
                   >
-                    {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                    {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                     <span>{isCopied ? 'Copied!' : 'Copy to Clipboard'}</span>
                   </Button>
 
                   <Button
                     type="button"
                     onClick={handleOpenMail}
-                    className="w-full sm:w-auto gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                    className={`w-full sm:w-auto gap-1.5 text-white text-xs font-semibold ${
+                      isService
+                        ? 'bg-[#007F7C] hover:bg-[#006663]'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
                   >
                     <Mail className="h-3.5 w-3.5" />
                     <span>Open in Email Client (mailto)</span>
@@ -393,12 +443,18 @@ export function ReplyTriagePage() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center p-12 text-center space-y-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-500">
+                <div
+                  className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                    isService
+                      ? 'bg-[#007F7C]/15 text-[#007F7C] dark:text-[#38D5D2]'
+                      : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                  }`}
+                >
                   <Sparkles className="h-6 w-6" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-800">No Draft Generated Yet</h4>
-                  <p className="text-xs text-slate-500 max-w-xs mt-1">
+                  <h4 className="font-bold text-slate-800 dark:text-zinc-200">No Draft Generated Yet</h4>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-xs mt-1">
                     Select a client message and click "Classify Intent" on the left to produce a grounded email response.
                   </p>
                 </div>

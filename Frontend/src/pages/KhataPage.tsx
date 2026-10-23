@@ -72,6 +72,16 @@ export function KhataPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 leading-tight">
+          Khata / Credit Book
+        </h1>
+        <p className="text-xs text-zinc-500 font-normal mt-1">
+          Customer credit ledger, dues & payment tracking
+        </p>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
           <KPICard key={card.title} title={card.title} value={card.value} icon={card.icon} variant={card.variant} />

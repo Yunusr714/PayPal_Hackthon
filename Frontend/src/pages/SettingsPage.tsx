@@ -100,12 +100,13 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {/* Page Header */}
       <div>
-        <h2 className="text-2xl font-black tracking-tight text-slate-900">
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 leading-tight">
           Settings & Configuration
-        </h2>
-        <p className="text-sm text-slate-500 mt-0.5">
-          Manage your business workspace profile, PayPal Sandbox Invoicing v2 credentials, and AI preferences.
+        </h1>
+        <p className="text-xs text-zinc-500 font-normal mt-1">
+          Business configuration, credentials & PayPal API integrations
         </p>
       </div>
 

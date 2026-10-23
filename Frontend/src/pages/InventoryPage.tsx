@@ -40,7 +40,16 @@ export function InventoryPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 leading-tight">
+          Inventory Management
+        </h1>
+        <p className="text-xs text-zinc-500 font-normal mt-1">
+          Stock quantities, reorder thresholds & SKUs
+        </p>
+      </div>
+
       {/* Notice for Service Providers */}
       {category === 'service' && (
         <div className="rounded-2xl border border-[#007F7C]/30 bg-[#E6F5F5]/70 p-4 shadow-xs">

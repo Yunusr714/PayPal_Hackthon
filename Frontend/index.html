@@ -6,6 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cashiko — Context-Aware Receivables Copilot</title>
     <meta name="description" content="Intelligent receivables copilot for freelancers and agencies. AI work brief intake, PayPal Invoicing API v2 execution, and reply triage." />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('cashiko-theme');
+          if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

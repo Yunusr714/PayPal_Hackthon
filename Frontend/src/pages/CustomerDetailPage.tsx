@@ -212,7 +212,7 @@ export function CustomerDetailPage() {
                 type: 'statement',
                 title: 'Customer Khata Statement & Ledger',
                 date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-                dueDate: customer.lastPaymentDate || 'Immediate',
+                dueDate: (customer as any).lastPaymentDate || customer.lastVisit || 'Immediate',
                 customerName: customer.name,
                 customerPhone: customer.phone,
                 items: dues.length > 0

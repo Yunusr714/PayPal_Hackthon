@@ -239,7 +239,18 @@ export function SalesPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 leading-tight">
+          {isService ? 'Service Billings' : 'Sales & POS'}
+        </h1>
+        <p className="text-xs text-zinc-500 font-normal mt-1">
+          {isService
+            ? 'Track work order charges, client billings & receipts'
+            : 'Track counter sales, retail bills & payment receipts'}
+        </p>
+      </div>
+
       {/* Top Search & Actions */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col sm:flex-row gap-2">
@@ -250,14 +261,14 @@ export function SalesPage() {
               placeholder={isService ? 'Search invoice, client, or service...' : 'Search invoice or items...'}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="h-9 w-full rounded-xl border border-input bg-white pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="h-9 w-full rounded-xl border border-input dark:border-zinc-800 bg-white dark:bg-[#141518] pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
           <Select value={modeFilter} onValueChange={(v) => { setModeFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-full sm:w-36 h-9 text-xs rounded-xl">
+            <SelectTrigger className="w-full sm:w-36 h-9 text-xs rounded-xl dark:bg-[#141518] dark:border-zinc-800 dark:text-zinc-200">
               <SelectValue placeholder="Payment Mode" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="dark:bg-[#141518] dark:border-zinc-800 dark:text-zinc-200">
               <SelectItem value="all">All Modes</SelectItem>
               <SelectItem value="Cash">Cash</SelectItem>
               <SelectItem value="UPI">UPI</SelectItem>
@@ -266,10 +277,10 @@ export function SalesPage() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-full sm:w-32 h-9 text-xs rounded-xl">
+            <SelectTrigger className="w-full sm:w-32 h-9 text-xs rounded-xl dark:bg-[#141518] dark:border-zinc-800 dark:text-zinc-200">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="dark:bg-[#141518] dark:border-zinc-800 dark:text-zinc-200">
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="Paid">Paid</SelectItem>
               <SelectItem value="Pending">Pending</SelectItem>
@@ -297,10 +308,10 @@ export function SalesPage() {
 
       {/* Top Status Strip: Service Rate Card (Service mode) vs Live Inventory (Shop mode) */}
       {isService ? (
-        <div className="rounded-2xl border border-[#007F7C]/30 bg-[#E6F5F5]/40 p-4 shadow-sm">
+        <div className="rounded-2xl border border-[#007F7C]/30 bg-[#E6F5F5]/40 dark:bg-[#007F7C]/10 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2.5">
-            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-              <Wrench className="h-4 w-4 text-[#007F7C]" /> Active Services & Rate Card (Zero Inventory · Standard Labor Rates)
+            <span className="text-xs font-bold text-slate-800 dark:text-teal-200 flex items-center gap-1.5">
+              <Wrench className="h-4 w-4 text-[#007F7C] dark:text-teal-400" /> Active Services & Rate Card (Zero Inventory · Standard Labor Rates)
             </span>
             <span className="text-[11px] text-muted-foreground font-medium">
               {services.length} services configured
@@ -311,16 +322,16 @@ export function SalesPage() {
             {services.slice(0, 4).map((srv) => (
               <div
                 key={srv.id}
-                className="rounded-xl border border-[#007F7C]/20 bg-white p-2.5 transition-all hover:border-[#007F7C]/40 hover:shadow-xs"
+                className="rounded-xl border border-[#007F7C]/20 dark:border-[#007F7C]/30 bg-white dark:bg-[#141518] p-2.5 transition-all hover:border-[#007F7C]/40 hover:shadow-xs"
               >
                 <div className="flex items-start justify-between gap-1">
-                  <p className="text-xs font-bold text-slate-900 truncate">{srv.name}</p>
-                  <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#E6F5F5] text-[#007F7C] border border-[#007F7C]/30">
+                  <p className="text-xs font-bold text-slate-900 dark:text-zinc-100 truncate">{srv.name}</p>
+                  <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#E6F5F5] dark:bg-[#007F7C]/25 text-[#007F7C] dark:text-teal-300 border border-[#007F7C]/30">
                     {srv.pricingType}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-[#007F7C]">
+                  <span className="font-extrabold text-[#007F7C] dark:text-teal-400">
                     {formatINR(srv.price)}
                     <span className="text-[10px] font-medium text-muted-foreground">
                       /{srv.pricingType === 'Hourly' ? 'hr' : 'job'}
@@ -333,9 +344,9 @@ export function SalesPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-[#141518] p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2.5">
-            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-800 dark:text-zinc-100 flex items-center gap-1.5">
               <Package className="h-4 w-4 text-primary" /> Live Inventory Stock Levels (Auto-updates with each sale)
             </span>
             <span className="text-[11px] text-muted-foreground">
@@ -347,20 +358,20 @@ export function SalesPage() {
             {products.slice(0, 6).map((prod) => (
               <div
                 key={prod.name}
-                className="rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 transition-all hover:bg-slate-100/70"
+                className="rounded-xl border border-slate-100 dark:border-zinc-800 bg-slate-50/70 dark:bg-[#18191D] p-2.5 transition-all hover:bg-slate-100/70 dark:hover:bg-zinc-800/60"
               >
-                <p className="text-xs font-bold text-slate-900 truncate">{prod.name}</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-zinc-100 truncate">{prod.name}</p>
                 <div className="mt-1 flex items-center justify-between">
                   <span className="text-xs font-extrabold text-foreground">
                     {prod.stock} <span className="text-[10px] font-medium text-muted-foreground">{prod.unit}</span>
                   </span>
                   <span
-                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border ${
                       prod.stock <= 0
-                        ? 'bg-rose-100 text-rose-800'
+                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/50'
                         : prod.stock <= prod.reorderLevel
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-emerald-100 text-emerald-800'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/50'
+                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/50'
                     }`}
                   >
                     {prod.stock <= 0 ? 'Out' : prod.stock <= prod.reorderLevel ? 'Low' : 'OK'}
@@ -373,11 +384,11 @@ export function SalesPage() {
       )}
 
       {/* Sales Invoices Table Card */}
-      <Card className="rounded-2xl border-border shadow-sm">
+      <Card className="rounded-2xl border-border dark:border-zinc-800 bg-white dark:bg-[#141518] shadow-sm">
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-slate-50/70">
-              <TableRow className="border-border hover:bg-transparent">
+            <TableHeader className="bg-slate-50/70 dark:bg-[#18191D]">
+              <TableRow className="border-border dark:border-zinc-800 hover:bg-transparent">
                 <TableHead className="pl-6 text-xs uppercase font-semibold">Invoice ID</TableHead>
                 <TableHead className="text-xs uppercase font-semibold">
                   {isService ? 'Client / Party' : 'Sale Type'}
@@ -403,10 +414,10 @@ export function SalesPage() {
                 </TableRow>
               ) : (
                 pageData.map((sale) => (
-                  <TableRow key={sale.id} className="border-border hover:bg-slate-50/50">
+                  <TableRow key={sale.id} className="border-border dark:border-zinc-800 hover:bg-slate-50/50 dark:hover:bg-zinc-800/40">
                     <TableCell className="pl-6 font-bold text-foreground text-xs">{sale.id}</TableCell>
                     <TableCell>
-                      <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md border border-transparent dark:border-zinc-700/60">
                         {sale.customer === 'Counter Sale' ? 'Counter Walk-in' : sale.customer}
                       </span>
                     </TableCell>
@@ -421,7 +432,7 @@ export function SalesPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => setSelectedReceipt(sale)}
-                          className="h-7 text-xs text-slate-600 font-medium hover:bg-slate-100 px-2"
+                          className="h-7 text-xs text-slate-600 dark:text-zinc-300 font-medium hover:bg-slate-100 dark:hover:bg-zinc-800 px-2"
                         >
                           <Eye className="h-3 w-3 mr-1" /> View
                         </Button>
@@ -429,7 +440,7 @@ export function SalesPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => setPrintableData(buildReceiptDataFromSale(sale))}
-                          className="h-7 text-xs text-primary border-primary/30 font-semibold hover:bg-primary/5 px-2"
+                          className="h-7 text-xs text-primary dark:text-emerald-400 border-primary/30 dark:border-emerald-500/30 font-semibold hover:bg-primary/5 dark:hover:bg-emerald-500/10 px-2"
                         >
                           <Printer className="h-3 w-3 mr-1" /> Print Slip
                         </Button>
@@ -445,7 +456,7 @@ export function SalesPage() {
 
       {/* NEW SALE / INVOICE MODAL */}
       <Dialog open={isNewSaleOpen} onOpenChange={setIsNewSaleOpen}>
-        <DialogContent className="max-w-md rounded-2xl border-border bg-white p-6 shadow-2xl">
+        <DialogContent className="max-w-md rounded-2xl border-border dark:border-zinc-800 bg-white dark:bg-[#141518] p-6 shadow-2xl dark:text-zinc-100">
           <DialogHeader className="pb-1">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -476,16 +487,16 @@ export function SalesPage() {
                       Service Offering <span className="text-destructive">*</span>
                     </Label>
                     {activeService && (
-                      <span className="text-[11px] font-semibold text-[#007F7C] bg-[#E6F5F5] px-2 py-0.5 rounded border border-[#007F7C]/30">
+                      <span className="text-[11px] font-semibold text-[#007F7C] dark:text-teal-300 bg-[#E6F5F5] dark:bg-[#007F7C]/25 px-2 py-0.5 rounded border border-[#007F7C]/30">
                         {activeService.pricingType} · {activeService.duration}
                       </span>
                     )}
                   </div>
                   <Select value={selectedServiceId} onValueChange={handleServiceSelect}>
-                    <SelectTrigger className="h-10 text-sm">
+                    <SelectTrigger className="h-10 text-sm dark:bg-[#18191D] dark:border-zinc-800 dark:text-zinc-100">
                       <SelectValue placeholder="Choose service from rate card..." />
                     </SelectTrigger>
-                    <SelectContent className="max-h-60">
+                    <SelectContent className="max-h-60 dark:bg-[#141518] dark:border-zinc-800 dark:text-zinc-100">
                       {services.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           {s.name} · {formatINR(s.price)} ({s.pricingType})
@@ -506,7 +517,7 @@ export function SalesPage() {
                     placeholder="Client Walk-in or Customer Name"
                     value={serviceClient}
                     onChange={(e) => setServiceClient(e.target.value)}
-                    className="h-10 text-sm"
+                    className="h-10 text-sm dark:bg-[#18191D] dark:border-zinc-800 dark:text-zinc-100"
                   />
                 </div>
 
@@ -523,7 +534,7 @@ export function SalesPage() {
                       step="1"
                       value={serviceUnits}
                       onChange={(e) => setServiceUnits(e.target.value)}
-                      className="h-10 text-sm font-semibold"
+                      className="h-10 text-sm font-semibold dark:bg-[#18191D] dark:border-zinc-800 dark:text-zinc-100"
                       required
                     />
                   </div>
@@ -541,7 +552,7 @@ export function SalesPage() {
                         step="10"
                         value={serviceRate}
                         onChange={(e) => setServiceRate(e.target.value)}
-                        className="h-10 pl-7 text-sm font-semibold"
+                        className="h-10 pl-7 text-sm font-semibold dark:bg-[#18191D] dark:border-zinc-800 dark:text-zinc-100"
                         required
                       />
                     </div>
@@ -559,23 +570,23 @@ export function SalesPage() {
                     placeholder="e.g. Italian navy fabric trial, leak joint sealed"
                     value={serviceNotes}
                     onChange={(e) => setServiceNotes(e.target.value)}
-                    className="h-9 text-xs"
+                    className="h-9 text-xs dark:bg-[#18191D] dark:border-zinc-800 dark:text-zinc-100"
                   />
                 </div>
 
                 {/* Service Model Banner (Zero Inventory info) */}
-                <div className="rounded-xl border border-[#007F7C]/30 bg-[#E6F5F5]/60 p-3 text-slate-800">
+                <div className="rounded-xl border border-[#007F7C]/30 bg-[#E6F5F5]/60 dark:bg-[#007F7C]/15 p-3 text-slate-800 dark:text-zinc-200">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-[#005B59]">Billing Model:</span>
-                    <span className="font-bold text-[#007F7C]">Zero Inventory · Labor & Rates</span>
+                    <span className="font-medium text-[#005B59] dark:text-teal-300">Billing Model:</span>
+                    <span className="font-bold text-[#007F7C] dark:text-teal-400">Zero Inventory · Labor & Rates</span>
                   </div>
                   <div className="flex items-center justify-between text-xs mt-1">
                     <span className="font-medium text-muted-foreground">Standard Duration:</span>
                     <span className="font-semibold">{activeService?.duration || 'Same day'}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs mt-1.5 pt-1.5 border-t border-[#007F7C]/20 font-bold">
-                    <span className="text-[#005B59]">Net Service Charge:</span>
-                    <span className="text-[#007F7C] font-black text-sm">
+                  <div className="flex items-center justify-between text-xs mt-1.5 pt-1.5 border-t border-[#007F7C]/20 dark:border-[#007F7C]/30 font-bold">
+                    <span className="text-[#005B59] dark:text-teal-300">Net Service Charge:</span>
+                    <span className="text-[#007F7C] dark:text-teal-400 font-black text-sm">
                       {formatINR(serviceTotal)}
                     </span>
                   </div>
@@ -591,16 +602,16 @@ export function SalesPage() {
                       Select Product <span className="text-destructive">*</span>
                     </Label>
                     {activeProduct && (
-                      <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                      <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-800/50">
                         In Stock: {activeProduct.stock} {activeProduct.unit}
                       </span>
                     )}
                   </div>
                   <Select value={selectedProductName} onValueChange={handleProductSelect}>
-                    <SelectTrigger className="h-10 text-sm">
+                    <SelectTrigger className="h-10 text-sm dark:bg-[#18191D] dark:border-zinc-800 dark:text-zinc-100">
                       <SelectValue placeholder="Choose product..." />
                     </SelectTrigger>
-                    <SelectContent className="max-h-60">
+                    <SelectContent className="max-h-60 dark:bg-[#141518] dark:border-zinc-800 dark:text-zinc-100">
                       {products.map((p) => (
                         <SelectItem key={p.name} value={p.name}>
                           {p.name} · {formatINR(p.sellingPrice)}/{p.unit} ({p.stock} left)
@@ -623,7 +634,7 @@ export function SalesPage() {
                       step="1"
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
-                      className={`h-10 text-sm font-semibold ${isOutOfStock ? 'border-destructive text-destructive' : ''}`}
+                      className={`h-10 text-sm font-semibold dark:bg-[#18191D] dark:border-zinc-800 dark:text-zinc-100 ${isOutOfStock ? 'border-destructive text-destructive' : ''}`}
                       required
                     />
                   </div>
@@ -641,7 +652,7 @@ export function SalesPage() {
                         step="0.5"
                         value={unitPrice}
                         onChange={(e) => setUnitPrice(e.target.value)}
-                        className="h-10 pl-7 text-sm font-semibold"
+                        className="h-10 pl-7 text-sm font-semibold dark:bg-[#18191D] dark:border-zinc-800 dark:text-zinc-100"
                         required
                       />
                     </div>
@@ -651,8 +662,8 @@ export function SalesPage() {
                 {/* Live Stock Updation Preview Box */}
                 <div className={`rounded-xl border p-3 transition-colors ${
                   isOutOfStock
-                    ? 'border-rose-300 bg-rose-50 text-rose-900'
-                    : 'border-blue-200 bg-blue-50/60 text-slate-800'
+                    ? 'border-rose-300 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200'
+                    : 'border-blue-200 dark:border-zinc-800 bg-blue-50/60 dark:bg-[#18191D] text-slate-800 dark:text-zinc-200'
                 }`}>
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium">Original Stock:</span>
@@ -662,9 +673,9 @@ export function SalesPage() {
                     <span className="font-medium">Quantity to Sell:</span>
                     <span className="font-bold text-destructive">-{numQty} {activeProduct?.unit}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs mt-1.5 pt-1.5 border-t border-slate-200 font-bold">
+                  <div className="flex items-center justify-between text-xs mt-1.5 pt-1.5 border-t border-slate-200 dark:border-zinc-800 font-bold">
                     <span>Remaining Stock after Sale:</span>
-                    <span className={isOutOfStock ? 'text-destructive font-black' : 'text-emerald-700 font-black'}>
+                    <span className={isOutOfStock ? 'text-destructive font-black' : 'text-emerald-700 dark:text-emerald-400 font-black'}>
                       {isOutOfStock ? 'Insufficient Stock!' : `${stockAfterSale} ${activeProduct?.unit}`}
                     </span>
                   </div>
@@ -686,7 +697,7 @@ export function SalesPage() {
                     className={`rounded-lg py-1.5 text-xs font-semibold border transition-all ${
                       paymentMode === mode
                         ? 'border-primary bg-primary text-white shadow-xs'
-                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#18191D] text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800'
                     }`}
                   >
                     {mode}
@@ -696,7 +707,7 @@ export function SalesPage() {
             </div>
 
             {/* Total Bill Banner */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex items-center justify-between">
+            <div className="rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-[#18191D] p-3 flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-medium text-muted-foreground">
                   {isService ? 'Total Service Invoice' : 'Total Bill Amount'}
@@ -705,7 +716,7 @@ export function SalesPage() {
                   {isService ? 'Labor & workmanship charge' : 'Counter invoice total'}
                 </p>
               </div>
-              <span className="text-xl font-black text-slate-900">
+              <span className="text-xl font-black text-slate-900 dark:text-zinc-100">
                 {formatINR(isService ? serviceTotal : numQty * numPrice)}
               </span>
             </div>
@@ -715,7 +726,7 @@ export function SalesPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setIsNewSaleOpen(false)}
-                className="text-xs"
+                className="text-xs dark:border-zinc-800 dark:hover:bg-zinc-800"
               >
                 Cancel
               </Button>
@@ -741,58 +752,58 @@ export function SalesPage() {
 
       {/* RECEIPT / INVOICE MODAL */}
       <Dialog open={!!selectedReceipt} onOpenChange={(open) => !open && setSelectedReceipt(null)}>
-        <DialogContent className="max-w-md rounded-2xl border-border bg-white p-6 shadow-2xl">
+        <DialogContent className="max-w-md rounded-2xl border-border dark:border-zinc-800 bg-white dark:bg-[#141518] p-6 shadow-2xl dark:text-zinc-100">
           {selectedReceipt && (
             <div className="space-y-4">
               {/* Receipt Header */}
-              <div className="border-b pb-3 text-center">
+              <div className="border-b dark:border-zinc-800 pb-3 text-center">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-primary">
                   {isService ? 'Service Billing & Receipt' : 'Retail Cash Memo'}
                 </span>
-                <h3 className="text-base font-bold text-slate-900 mt-0.5">{user.businessName}</h3>
+                <h3 className="text-base font-bold text-slate-900 dark:text-zinc-100 mt-0.5">{user.businessName}</h3>
                 <p className="text-[11px] text-muted-foreground">{user.address || 'GSTIN / Retail Store'}</p>
               </div>
 
               {/* Invoice Meta */}
-              <div className="grid grid-cols-2 text-xs gap-2 py-1 border-b border-dashed border-slate-200">
+              <div className="grid grid-cols-2 text-xs gap-2 py-1 border-b border-dashed border-slate-200 dark:border-zinc-800">
                 <div>
                   <span className="text-muted-foreground text-[10px]">Invoice No:</span>
-                  <p className="font-bold text-slate-800">{selectedReceipt.id}</p>
+                  <p className="font-bold text-slate-800 dark:text-zinc-200">{selectedReceipt.id}</p>
                 </div>
                 <div className="text-right">
                   <span className="text-muted-foreground text-[10px]">Date:</span>
-                  <p className="font-bold text-slate-800">{selectedReceipt.date}</p>
+                  <p className="font-bold text-slate-800 dark:text-zinc-200">{selectedReceipt.date}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground text-[10px]">{isService ? 'Client / Billed To:' : 'Customer:'}</span>
-                  <p className="font-bold text-slate-800">{selectedReceipt.customer}</p>
+                  <p className="font-bold text-slate-800 dark:text-zinc-200">{selectedReceipt.customer}</p>
                 </div>
                 <div className="text-right">
                   <span className="text-muted-foreground text-[10px]">Payment Mode:</span>
-                  <p className="font-bold text-slate-800">{selectedReceipt.mode} ({selectedReceipt.status})</p>
+                  <p className="font-bold text-slate-800 dark:text-zinc-200">{selectedReceipt.mode} ({selectedReceipt.status})</p>
                 </div>
               </div>
 
               {/* Particulars Table */}
               <div className="space-y-2">
-                <div className="flex justify-between text-xs font-semibold text-slate-500 uppercase border-b pb-1">
+                <div className="flex justify-between text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase border-b dark:border-zinc-800 pb-1">
                   <span>{isService ? 'Service Scope / Work' : 'Item Particulars'}</span>
                   <span>Amount</span>
                 </div>
-                <div className="flex justify-between text-xs font-medium text-slate-900 py-1">
-                  <span className="max-w-[260px]">{selectedReceipt.items}</span>
+                <div className="flex justify-between text-xs font-medium text-slate-900 dark:text-zinc-100 py-1">
+                  <span className="max-w-[260px] truncate">{selectedReceipt.items}</span>
                   <span className="font-bold">{formatINR(selectedReceipt.amount)}</span>
                 </div>
               </div>
 
               {/* Total & Model Note */}
-              <div className="border-t border-slate-200 pt-3">
-                <div className="flex justify-between items-center text-sm font-extrabold text-slate-900">
+              <div className="border-t border-slate-200 dark:border-zinc-800 pt-3">
+                <div className="flex justify-between items-center text-sm font-extrabold text-slate-900 dark:text-zinc-100">
                   <span>Total Amount Paid</span>
                   <span className="text-lg text-primary">{formatINR(selectedReceipt.amount)}</span>
                 </div>
                 {isService && (
-                  <p className="mt-2 text-[10px] text-[#007F7C] bg-[#E6F5F5] rounded p-1.5 border border-[#007F7C]/30 flex items-center gap-1.5 font-medium">
+                  <p className="mt-2 text-[10px] text-[#007F7C] dark:text-teal-300 bg-[#E6F5F5] dark:bg-[#007F7C]/20 rounded p-1.5 border border-[#007F7C]/30 flex items-center gap-1.5 font-medium">
                     <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
                     Zero Inventory Model: Quality workmanship & service guaranteed.
                   </p>
@@ -805,7 +816,7 @@ export function SalesPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedReceipt(null)}
-                  className="text-xs w-full sm:w-auto"
+                  className="text-xs w-full sm:w-auto dark:border-zinc-800 dark:hover:bg-zinc-800"
                 >
                   Close
                 </Button>
@@ -818,7 +829,7 @@ export function SalesPage() {
                       const msg = `Namaste ${selectedReceipt.customer}! Here is your Cashiko receipt for ${selectedReceipt.id}: ${selectedReceipt.items}. Total amount: ₹${selectedReceipt.amount.toLocaleString('en-IN')}. Mode: ${selectedReceipt.mode} (${selectedReceipt.status}). Thank you for your business!`;
                       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
                     }}
-                    className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    className="text-xs border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                   >
                     Share WhatsApp
                   </Button>

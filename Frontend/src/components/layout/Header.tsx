@@ -1,20 +1,14 @@
-import { useState } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
+  ChatRoundDots,
   Bell,
-  ChevronDown,
-  RefreshCw,
-  Store,
-  Scissors,
-  Wrench,
-  UserPlus,
-  LogIn,
-  Sparkles,
-  CreditCard,
-} from 'lucide-react';
+  CheckCircle,
+  Clock,
+  MagicStar,
+} from 'reicon-react';
 import { MobileSidebar } from './Sidebar';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,221 +17,218 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { useBusiness } from '@/context/BusinessContext';
-import { useReceivables } from '@/context/ReceivablesContext';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { AIChatbotDrawer } from '@/components/shared/AIChatbotDrawer';
 
-const pageMeta: Record<string, { title: string; subtitle: string }> = {
-  '/': { title: 'Dashboard', subtitle: 'Business performance & operations overview' },
-  '/services': { title: 'Services & Rate Card', subtitle: 'Manage service pricing, job types & rate cards' },
-  '/create': { title: 'Smart Intake with AI', subtitle: 'Extract structured items from raw briefs via Groq AI' },
-  '/invoices': { title: 'PayPal Invoices Ledger', subtitle: 'Live PayPal Sandbox Invoicing API v2 execution & tracking' },
-  '/triage': { title: 'Customer Reply Copilot', subtitle: '7-intent classification, promised date detection & grounded replies' },
-  '/sales': { title: 'Sales & Invoices', subtitle: 'Track and generate customer bills' },
-  '/khata': { title: 'Khata / Credit Book', subtitle: 'Customer credit, dues & automated reminders' },
-  '/customers': { title: 'Customers', subtitle: 'Customer profiles, credit health & history' },
-  '/inventory': { title: 'Inventory Management', subtitle: 'Stock levels, reorder thresholds & products' },
-  '/payments': { title: 'Payments', subtitle: 'UPI, Cash & PayPal transaction records' },
-  '/activity': { title: 'Activity & Audit Trail', subtitle: 'Immutable record of AI proposals, user approvals & PayPal events' },
-  '/settings': { title: 'Settings', subtitle: 'Business configuration & profile preferences' },
-  '/register': { title: 'Register Business', subtitle: 'Set up shop or service workspace' },
-  '/login': { title: 'Sign In', subtitle: 'Access your merchant dashboard' },
-};
-
 export function Header() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const { user, category, toggleCategory } = useBusiness();
-  const { connectionStatus, checkConnection } = useReceivables();
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  let meta = pageMeta[location.pathname];
-  if (location.pathname === '/sales') {
-    meta =
-      category === 'service'
-        ? { title: 'Service Billings & Invoices', subtitle: 'Track work order charges, client billings & receipts' }
-        : { title: 'Sales & Invoices', subtitle: 'Track counter sales, retail bills & payment receipts' };
-  }
-  if (!meta && location.pathname.startsWith('/customers/')) {
-    const custName = decodeURIComponent(location.pathname.replace('/customers/', ''));
-    meta = {
-      title: custName ? `${custName} — Ledger` : 'Customer Profile',
-      subtitle:
-        category === 'service'
-          ? 'Outstanding dues, service work orders & payment records'
-          : 'Outstanding dues, grocery credit ledger & payment records',
+  // Keyboard shortcut (⌘K or Ctrl+K) to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('topbar-search-input')?.focus();
+      }
     };
-  }
-  if (!meta) {
-    meta = {
-      title: category === 'service' ? 'Service Operations' : 'Store Operations',
-      subtitle: user.businessName,
-    };
-  }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
-  const isPayPalReady = connectionStatus?.paypal_configured;
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    // Default search action routes to Khata or Customers based on query
+    navigate(`/customers?q=${encodeURIComponent(searchQuery.trim())}`);
+  };
 
   return (
-    <>
-      <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-border bg-white px-4 lg:px-6 shadow-2xs box-border">
-        {/* Left: Mobile trigger & Page title */}
-        <div className="flex items-center gap-3">
-          <MobileSidebar />
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-foreground lg:text-lg">{meta.title}</h1>
-              <span
-                onClick={toggleCategory}
-                title="Click to toggle between Shop and Service mode"
-                className={`cursor-pointer hidden sm:inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase transition-transform active:scale-95 border ${
-                  category === 'service'
-                    ? 'bg-[#E6F5F5] text-[#007F7C] hover:bg-[#D4EFEF] border-[#007F7C]/30'
-                    : 'bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200'
-                }`}
-              >
-                <RefreshCw className="h-2.5 w-2.5" />
-                {category === 'service' ? 'Service Mode' : 'Shop Mode'}
-              </span>
-            </div>
-            <p className="hidden text-xs text-muted-foreground sm:block">{meta.subtitle}</p>
+    <TooltipProvider delayDuration={150}>
+      <header className="sticky top-0 z-30 flex h-16 w-full items-center px-6 lg:px-8 bg-[#F8F9FA]/80 backdrop-blur-md transition-all box-border">
+        <div className="mx-auto max-w-7xl w-full flex items-center justify-between">
+          {/* Left: Mobile Sidebar Trigger only on small screens */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <MobileSidebar />
           </div>
-        </div>
 
-        {/* Right: Search, Sandbox Badge, Mode Toggle, AI Copilot, User profile */}
-        <div className="flex items-center gap-2 lg:gap-3">
-          {/* Search bar */}
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          {/* Right: Search Pill + AI Copilot Button + Notifications Button */}
+          <div className="flex items-center gap-3 ml-auto">
+          {/* Search Pill Capsule */}
+          <form
+            onSubmit={handleSearchSubmit}
+            className="relative hidden sm:flex items-center h-11 w-64 md:w-80 lg:w-96 rounded-full bg-white dark:bg-[#141518] border border-zinc-200/80 dark:border-zinc-800/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] pl-4 pr-1.5 transition-all focus-within:border-zinc-400 dark:focus-within:border-zinc-600 focus-within:ring-2 focus-within:ring-zinc-900/5 focus-within:shadow-md"
+          >
             <input
+              id="topbar-search-input"
               type="text"
-              placeholder={
-                category === 'service'
-                  ? 'Search services, client work orders, khata...'
-                  : 'Search customers, products, invoices...'
-              }
-              className="h-9 w-52 rounded-xl border border-input bg-muted/40 pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all lg:w-64"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search or ask AI..."
+              className="h-full w-full bg-transparent text-xs text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none pr-2 font-normal"
             />
-          </div>
 
-          {/* PayPal Sandbox Status Badge */}
-          <div
-            onClick={() => checkConnection()}
-            title="PayPal Invoicing API v2 Sandbox Connected"
-            className="cursor-pointer hidden sm:flex items-center gap-1.5 rounded-full border border-border bg-slate-50/80 px-2.5 py-1 text-xs transition-colors hover:bg-slate-100/80"
-          >
-            <span
-              className={`h-2 w-2 rounded-full ${
-                isPayPalReady ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-              }`}
-            />
-            <span className="font-semibold text-slate-700 text-[11px]">
-              {isPayPalReady ? 'PayPal Sandbox' : 'Sandbox Demo'}
-            </span>
-          </div>
+            {/* Keyboard shortcut badge */}
+            <kbd className="hidden md:inline-flex items-center gap-0.5 rounded-md border border-zinc-200/80 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 px-1.5 py-0.5 text-[10px] font-medium text-zinc-400 font-mono shrink-0 mr-1.5 select-none">
+              ⌘K
+            </kbd>
 
-          {/* Switch Mode Button */}
-          <button
-            onClick={() => toggleCategory()}
-            className="hidden sm:inline-flex items-center gap-1.5 h-9 rounded-xl border border-border bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
-            title="Toggle between Service and Shop modes"
-          >
-            <RefreshCw className="h-3.5 w-3.5 text-slate-500" />
-            <span>Switch to {category === 'service' ? 'Shop' : 'Service'}</span>
-          </button>
+            {/* Black circle search button */}
+            <button
+              type="submit"
+              className="h-8 w-8 rounded-full bg-[#18181B] dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center hover:bg-black dark:hover:bg-zinc-200 transition-all shadow-xs active:scale-95 shrink-0 cursor-pointer"
+              aria-label="Submit search"
+            >
+              <Search size={15} weight="Outline" />
+            </button>
+          </form>
 
-          {/* AI Copilot Button */}
-          <Button
-            size="sm"
-            onClick={() => setIsAIOpen(true)}
-            className="gap-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold text-xs shadow-2xs"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">AI Copilot</span>
-          </Button>
+          {/* AI Copilot Button: Circular White Pill with Chat/Sparkle icon & pink dot */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setIsAIOpen(true)}
+                className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white dark:bg-[#141518] border border-zinc-200/80 dark:border-zinc-800/80 shadow-[0_2px_8px_rgba(0,0,0,0.04)] text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/60 active:scale-95 transition-all cursor-pointer group"
+                aria-label="Open AI Copilot"
+              >
+                <ChatRoundDots
+                  size={19}
+                  className="transition-transform duration-200 group-hover:scale-105"
+                />
+                {/* Accent notification / AI active dot */}
+                <span className="absolute top-2.5 right-2.5 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500 ring-2 ring-white dark:ring-zinc-900" />
+                </span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="bottom"
+              sideOffset={10}
+              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs text-white shadow-xl"
+            >
+              <span className="font-semibold">AI Copilot</span>
+              <p className="text-[10px] text-zinc-400">Ask questions, draft invoices & triage</p>
+            </TooltipContent>
+          </Tooltip>
 
-          {/* User Profile Dropdown Menu */}
+          {/* Notifications Button: Circular White Pill with Bell icon & counter badge */}
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-muted transition-colors cursor-pointer border border-transparent hover:border-border">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback
-                    className={`text-white text-xs font-bold ${
-                      category === 'service' ? 'bg-[#007F7C]' : 'bg-blue-600'
-                    }`}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="relative flex h-11 w-11 items-center justify-center rounded-full bg-white dark:bg-[#141518] border border-zinc-200/80 dark:border-zinc-800/80 shadow-[0_2px_8px_rgba(0,0,0,0.04)] text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/60 active:scale-95 transition-all cursor-pointer group"
+                    aria-label="View notifications"
                   >
-                    {user.avatar || 'CS'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden sm:block text-left">
-                  <p className="text-xs font-bold text-foreground leading-tight">{user.name}</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight">{user.businessName}</p>
-                </div>
-                <ChevronDown className="hidden sm:block h-3.5 w-3.5 text-muted-foreground" />
-              </div>
-            </DropdownMenuTrigger>
+                    <Bell
+                      size={19}
+                      className="transition-transform duration-200 group-hover:scale-105"
+                    />
+                    {/* Badge count matching reference pill badge */}
+                    <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#263D31] text-[10px] font-bold text-white border-2 border-white shadow-xs">
+                      3
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                sideOffset={10}
+                className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs text-white shadow-xl"
+              >
+                <span className="font-semibold">Notifications</span>
+                <p className="text-[10px] text-zinc-400">3 unread operational alerts</p>
+              </TooltipContent>
+            </Tooltip>
 
-            <DropdownMenuContent align="end" className="w-56 rounded-xl border-border bg-white p-1.5 shadow-lg">
-              <DropdownMenuLabel className="px-2 py-1.5 text-xs">
-                <p className="font-bold text-slate-900">{user.name}</p>
-                <p className="text-[11px] text-muted-foreground font-normal">{user.phone}</p>
-                <div className="mt-1 flex items-center gap-1">
-                  <span
-                    className={`text-[9px] font-bold uppercase rounded px-1.5 py-0.2 border ${
-                      category === 'service'
-                        ? 'bg-[#E6F5F5] text-[#007F7C] border-[#007F7C]/30'
-                        : 'bg-blue-100 text-blue-800 border-blue-200'
-                    }`}
-                  >
-                    {category === 'service' ? 'Service Provider' : 'Shop / Retail'}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">{user.subCategory}</span>
-                </div>
+            <DropdownMenuContent
+              align="end"
+              sideOffset={12}
+              className="w-80 rounded-2xl border border-zinc-200/80 bg-white p-2 shadow-2xl"
+            >
+              <DropdownMenuLabel className="px-3 py-2 text-xs flex items-center justify-between">
+                <span className="font-bold text-zinc-900 text-sm">Notifications</span>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200/60">
+                  Live
+                </span>
               </DropdownMenuLabel>
-
               <DropdownMenuSeparator />
 
+              {/* Notification 1: PayPal sandbox */}
               <DropdownMenuItem
-                onClick={toggleCategory}
-                className="text-xs cursor-pointer font-medium py-2 text-slate-800"
+                onClick={() => navigate('/invoices')}
+                className="rounded-xl p-2.5 text-xs cursor-pointer hover:bg-zinc-50 flex items-start gap-2.5"
               >
-                <RefreshCw className="mr-2 h-3.5 w-3.5 text-primary" />
-                Switch to {category === 'service' ? 'Shop Mode' : 'Service Mode'}
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">
+                  <CheckCircle size={16} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-zinc-900 leading-snug">PayPal Sandbox Connected</p>
+                  <p className="text-[11px] text-zinc-500 line-clamp-1">API v2 webhook & invoicing ready</p>
+                  <span className="text-[10px] text-zinc-400 flex items-center gap-1 mt-0.5">
+                    <Clock size={11} /> Just now
+                  </span>
+                </div>
               </DropdownMenuItem>
 
-              {category === 'service' ? (
-                <DropdownMenuItem
-                  onClick={() => navigate('/services')}
-                  className="text-xs cursor-pointer font-medium py-2 text-slate-800"
-                >
-                  <Scissors className="mr-2 h-3.5 w-3.5 text-[#007F7C]" />
-                  Manage Services & Rates
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  onClick={() => navigate('/inventory')}
-                  className="text-xs cursor-pointer font-medium py-2 text-slate-800"
-                >
-                  <Store className="mr-2 h-3.5 w-3.5 text-blue-600" />
-                  Manage Inventory & Stock
-                </DropdownMenuItem>
-              )}
+              {/* Notification 2: AI Intake */}
+              <DropdownMenuItem
+                onClick={() => navigate('/create')}
+                className="rounded-xl p-2.5 text-xs cursor-pointer hover:bg-zinc-50 flex items-start gap-2.5"
+              >
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 shrink-0 mt-0.5">
+                  <MagicStar size={16} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-zinc-900 leading-snug">AI Intake Draft Ready</p>
+                  <p className="text-[11px] text-zinc-500 line-clamp-1">Structured bill proposed from raw brief</p>
+                  <span className="text-[10px] text-zinc-400 flex items-center gap-1 mt-0.5">
+                    <Clock size={11} /> 12m ago
+                  </span>
+                </div>
+              </DropdownMenuItem>
+
+              {/* Notification 3: Khata dues reminder */}
+              <DropdownMenuItem
+                onClick={() => navigate('/khata')}
+                className="rounded-xl p-2.5 text-xs cursor-pointer hover:bg-zinc-50 flex items-start gap-2.5"
+              >
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-700 shrink-0 mt-0.5">
+                  <Bell size={16} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-zinc-900 leading-snug">Customer Due Reminder</p>
+                  <p className="text-[11px] text-zinc-500 line-clamp-1">Sharma Uncle balance due tomorrow</p>
+                  <span className="text-[10px] text-zinc-400 flex items-center gap-1 mt-0.5">
+                    <Clock size={11} /> 1h ago
+                  </span>
+                </div>
+              </DropdownMenuItem>
 
               <DropdownMenuSeparator />
-
               <DropdownMenuItem
-                onClick={() => navigate('/settings')}
-                className="text-xs cursor-pointer font-medium py-2 text-slate-800"
+                onClick={() => navigate('/activity')}
+                className="rounded-lg py-1.5 text-center justify-center text-xs font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 cursor-pointer"
               >
-                Settings & API Status
+                View full activity log
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </header>
+      </div>
+    </header>
 
       {/* Floating Right AI Chatbot Drawer */}
       <AIChatbotDrawer open={isAIOpen} onOpenChange={setIsAIOpen} />
-    </>
+    </TooltipProvider>
   );
 }

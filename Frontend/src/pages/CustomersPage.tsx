@@ -104,7 +104,16 @@ export function CustomersPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 leading-tight">
+          Customers
+        </h1>
+        <p className="text-xs text-zinc-500 font-normal mt-1">
+          Customer directory, trust health & order history
+        </p>
+      </div>
+
       {/* Search & Actions Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col sm:flex-row gap-2">

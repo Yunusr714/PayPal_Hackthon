@@ -63,23 +63,33 @@ export function ServicesPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      
-      {/* Top Actions Bar */}
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          onClick={() => setIsAddServiceOpen(true)}
-          className="bg-[#007F7C] hover:bg-[#006663] text-white font-semibold text-xs shadow-sm"
-        >
-          <Plus className="mr-1.5 h-3.5 w-3.5" /> Add New Service
-        </Button>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 leading-tight">
+            Services & Rate Card
+          </h1>
+          <p className="text-xs text-zinc-500 font-normal mt-1">
+            Custom rate cards, labor charges & job pricing
+          </p>
+        </div>
 
-        <Button
-          variant="outline"
-          onClick={() => setIsAddJobOpen(true)}
-          className="border-slate-200 text-foreground hover:bg-slate-50 text-xs font-medium"
-        >
-          <Briefcase className="mr-1.5 h-3.5 w-3.5 text-[#007F7C]" /> New Work Order
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setIsAddServiceOpen(true)}
+            className="bg-[#007F7C] hover:bg-[#006663] text-white font-semibold text-xs shadow-sm"
+          >
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Add New Service
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => setIsAddJobOpen(true)}
+            className="border-slate-200 text-foreground hover:bg-slate-50 text-xs font-medium"
+          >
+            <Briefcase className="mr-1.5 h-3.5 w-3.5 text-[#007F7C]" /> New Work Order
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
