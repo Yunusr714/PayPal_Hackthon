@@ -39,12 +39,7 @@ import { AddJobDialog } from '@/components/shared/AddJobDialog';
 import { AIChatbotDrawer } from '@/components/shared/AIChatbotDrawer';
 import { useBusiness } from '@/context/BusinessContext';
 import { useReceivables } from '@/context/ReceivablesContext';
-import {
-  formatINR,
-  recentSales,
-  lowStockAlerts,
-  Sale,
-} from '@/data/mock-data';
+import { formatINR } from '@/data/mock-data';
 
 interface ActivityItem {
   id: string;
@@ -55,61 +50,10 @@ interface ActivityItem {
   date: string;
 }
 
-const mockActivities: ActivityItem[] = [
-  {
-    id: 'INV_000076',
-    activity: 'Mobile App Purchase',
-    category: 'PayPal',
-    price: '$25,500',
-    status: 'Completed',
-    date: '17 Apr, 2026 03:45 PM',
-  },
-  {
-    id: 'INV_000075',
-    activity: 'Designer Silk Suit Tailoring',
-    category: 'Service',
-    price: '₹12,400',
-    status: 'Completed',
-    date: '17 Apr, 2026 01:20 PM',
-  },
-  {
-    id: 'INV_000074',
-    activity: 'Wholesale Grocery Counter Pack',
-    category: 'Retail',
-    price: '₹8,650',
-    status: 'Completed',
-    date: '16 Apr, 2026 06:10 PM',
-  },
-  {
-    id: 'INV_000073',
-    activity: 'PayPal Cross-Border Invoicing',
-    category: 'PayPal',
-    price: '$1,850',
-    status: 'Pending',
-    date: '16 Apr, 2026 11:30 AM',
-  },
-  {
-    id: 'INV_000072',
-    activity: 'Client Fitting & Work Delivery',
-    category: 'Service',
-    price: '₹4,200',
-    status: 'Completed',
-    date: '15 Apr, 2026 04:00 PM',
-  },
-  {
-    id: 'INV_000071',
-    activity: 'Khata Credit Settlement (UPI)',
-    category: 'Khata',
-    price: '₹3,500',
-    status: 'Completed',
-    date: '15 Apr, 2026 10:15 AM',
-  },
-];
-
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, category, services, serviceJobs, products, customers, sales } = useBusiness();
-  const { metrics } = useReceivables();
+  const { metrics, invoices } = useReceivables();
   const location = useLocation();
 
   const [balanceCurrency, setBalanceCurrency] = useState<'INR' | 'USD'>('INR');
@@ -121,7 +65,9 @@ export function DashboardPage() {
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
 
-  // Dynamic Time-of-Day Greeting (NO bye emoji!)
+  const isService = category === 'service';
+
+  // Dynamic Time-of-Day Greeting
   const greetingGreeting = useMemo(() => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -129,7 +75,7 @@ export function DashboardPage() {
     return 'Good evening';
   }, []);
 
-  // Compute live financial totals from DB
+  // Compute live financial totals from DB sales & customers
   const totalRevenue = useMemo(() => {
     return sales
       .filter((s) => s.status === 'Paid')
@@ -140,6 +86,49 @@ export function DashboardPage() {
     return customers.reduce((acc, c) => acc + (c.outstanding || 0), 0);
   }, [customers]);
 
+  // Live POS & Service Cash/UPI sales totals
+  const cashTotal = useMemo(() => {
+    return sales
+      .filter((s) => s.status === 'Paid' && s.mode === 'Cash')
+      .reduce((acc, s) => acc + s.amount, 0);
+  }, [sales]);
+
+  const upiTotal = useMemo(() => {
+    return sales
+      .filter((s) => s.status === 'Paid' && s.mode === 'UPI')
+      .reduce((acc, s) => acc + s.amount, 0);
+  }, [sales]);
+
+  // PayPal USD collected from invoices or sandbox metrics
+  const paypalTotalUSD = useMemo(() => {
+    const fromInvoices = invoices
+      .filter((inv) => inv.status === 'PAID')
+      .reduce((acc, inv) => acc + (Number(inv.total) || 0), 0);
+    return fromInvoices > 0 ? fromInvoices : (metrics.totalCollected || metrics.totalInvoiced || 0);
+  }, [invoices, metrics.totalCollected, metrics.totalInvoiced]);
+
+  // Unified balances using standard conversion 1 USD = ₹83.5
+  const paypalTotalINR = useMemo(() => Math.round(paypalTotalUSD * 83.5), [paypalTotalUSD]);
+  const totalSettledINR = useMemo(() => cashTotal + upiTotal + paypalTotalINR, [cashTotal, upiTotal, paypalTotalINR]);
+  const totalSettledUSD = useMemo(() => Number((totalSettledINR / 83.5).toFixed(2)), [totalSettledINR]);
+
+  // Cost and margin computations based on mode
+  const estimatedCosts = useMemo(() => {
+    const rate = isService ? 0.18 : 0.65;
+    return Math.round(totalRevenue * rate);
+  }, [isService, totalRevenue]);
+
+  const netIncome = useMemo(() => Math.max(0, totalRevenue - estimatedCosts), [totalRevenue, estimatedCosts]);
+
+  // Monthly credit limit & safety threshold buffer
+  const ceilingLimit = 25000;
+  const currentUtilized = totalOutstanding;
+  const limitPercentage = useMemo(() => {
+    return Math.min(100, Math.round((currentUtilized / ceilingLimit) * 100));
+  }, [currentUtilized, ceilingLimit]);
+  const remainingLimit = Math.max(0, ceilingLimit - currentUtilized);
+  const dailyBurnRate = Math.round(currentUtilized / 30);
+
   // Auto-open AI chatbot drawer if routed with query param
   useEffect(() => {
     if (location.search.includes('openAI=true')) {
@@ -147,9 +136,40 @@ export function DashboardPage() {
     }
   }, [location.search]);
 
+  // Build live unified activities from sales, service jobs, and PayPal invoices
+  const liveActivities = useMemo(() => {
+    const items: ActivityItem[] = [];
+
+    // 1. Add Sales / Service billings
+    sales.forEach((s) => {
+      items.push({
+        id: s.id,
+        activity: s.items || `${s.customer} (${s.mode})`,
+        category: s.mode === 'PayPal' ? 'PayPal' : isService ? 'Service' : 'Retail',
+        price: formatINR(s.amount),
+        status: s.status === 'Paid' ? 'Completed' : 'Pending',
+        date: s.date || 'Today',
+      });
+    });
+
+    // 2. Add PayPal Invoicing API v2 records
+    invoices.forEach((inv) => {
+      items.push({
+        id: inv.paypal_invoice_number || `INV-${inv.id.substring(0, 6).toUpperCase()}`,
+        activity: `${inv.recipient_name} (PayPal)`,
+        category: 'PayPal',
+        price: `$${Number(inv.total).toFixed(2)}`,
+        status: inv.status === 'PAID' ? 'Completed' : 'Pending',
+        date: new Date(inv.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      });
+    });
+
+    return items;
+  }, [sales, invoices, isService]);
+
   // Filter activities
   const filteredActivities = useMemo(() => {
-    return mockActivities.filter((act) => {
+    return liveActivities.filter((act) => {
       const matchSearch =
         act.activity.toLowerCase().includes(activitySearch.toLowerCase()) ||
         act.id.toLowerCase().includes(activitySearch.toLowerCase());
@@ -157,9 +177,7 @@ export function DashboardPage() {
         activityStatusFilter === 'all' || act.status === activityStatusFilter;
       return matchSearch && matchStatus;
     });
-  }, [activitySearch, activityStatusFilter]);
-
-  const isService = category === 'service';
+  }, [liveActivities, activitySearch, activityStatusFilter]);
 
   return (
     <div className="space-y-6">
@@ -273,11 +291,11 @@ export function DashboardPage() {
             {/* Big Bold Balance */}
             <div className="mt-3">
               <h2 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 font-mono">
-                {balanceCurrency === 'INR' ? '₹569,312.69' : '$6,831.75'}
+                {balanceCurrency === 'INR' ? formatINR(totalSettledINR || totalRevenue) : `$${totalSettledUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </h2>
               <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/80 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
                 <ArrowUpRight className="h-3 w-3" />
-                <span>+5% than last month</span>
+                <span>+{(sales.length + invoices.length) > 0 ? Math.min(18, (sales.length + invoices.length) * 2) : 5}% monthly velocity</span>
               </div>
             </div>
 
@@ -315,7 +333,7 @@ export function DashboardPage() {
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Cash
                 </p>
                 <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 font-mono mt-1">
-                  ₹18,041
+                  {formatINR(cashTotal)}
                 </p>
               </div>
 
@@ -324,7 +342,7 @@ export function DashboardPage() {
                   <span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> UPI
                 </p>
                 <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 font-mono mt-1">
-                  ₹10,740
+                  {formatINR(upiTotal)}
                 </p>
               </div>
 
@@ -333,7 +351,7 @@ export function DashboardPage() {
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" /> PayPal
                 </p>
                 <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 font-mono mt-1">
-                  $6,452
+                  ${Math.round(paypalTotalUSD).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -358,10 +376,10 @@ export function DashboardPage() {
             </div>
             <div className="mt-3">
               <h3 className="text-2xl font-bold font-mono tracking-tight">
-                ₹84,763
+                {formatINR(totalRevenue)}
               </h3>
               <span className="inline-block mt-1.5 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white/90">
-                +7% This month
+                {sales.filter((s) => s.status === 'Paid').length} paid sales
               </span>
             </div>
           </div>
@@ -378,10 +396,10 @@ export function DashboardPage() {
             </div>
             <div className="mt-3">
               <h3 className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
-                ₹15,525
+                {formatINR(estimatedCosts)}
               </h3>
               <span className="inline-flex items-center gap-0.5 mt-1.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/60 px-2 py-0.5 text-[10px] font-semibold">
-                <TrendingDown className="h-2.5 w-2.5" /> -3% This month
+                <TrendingDown className="h-2.5 w-2.5" /> {isService ? '18% OpEx' : '65% COGS'}
               </span>
             </div>
           </div>
@@ -398,10 +416,10 @@ export function DashboardPage() {
             </div>
             <div className="mt-3">
               <h3 className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
-                ₹68,679
+                {formatINR(netIncome)}
               </h3>
               <span className="inline-flex items-center gap-0.5 mt-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 px-2 py-0.5 text-[10px] font-semibold">
-                <TrendingUp className="h-2.5 w-2.5" /> +8% This month
+                <TrendingUp className="h-2.5 w-2.5" /> Net Margin
               </span>
             </div>
           </div>
@@ -410,7 +428,7 @@ export function DashboardPage() {
           <div className="rounded-3xl bg-white dark:bg-[#141518] border border-zinc-200/80 dark:border-zinc-800/80 p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                Total Revenue
+                Outstanding Dues
               </span>
               <div
                 className={`flex h-7 w-7 items-center justify-center rounded-xl ${
@@ -424,7 +442,7 @@ export function DashboardPage() {
             </div>
             <div className="mt-3">
               <h3 className="text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100 tracking-tight">
-                ₹43,840
+                {formatINR(totalOutstanding)}
               </h3>
               <span
                 className={`inline-flex items-center gap-0.5 mt-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -433,7 +451,7 @@ export function DashboardPage() {
                     : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/60'
                 }`}
               >
-                <TrendingUp className="h-2.5 w-2.5" /> +4% This month
+                {customers.filter((c) => (c.outstanding || 0) > 0).length} parties pending
               </span>
             </div>
           </div>
@@ -492,14 +510,14 @@ export function DashboardPage() {
           <div>
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                Monthly Spending Limit
+                Monthly Credit Buffer
               </h3>
               <span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 text-[10px] font-bold text-zinc-600 dark:text-zinc-400">
-                70.7% Target
+                {limitPercentage}% Utilized
               </span>
             </div>
             <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-              Current store expenditure vs allocated budget
+              Current customer dues vs safety threshold
             </p>
 
             {/* Target Numbers matching Image 1 */}
@@ -507,13 +525,13 @@ export function DashboardPage() {
               <div>
                 <span className="text-xs text-zinc-400 block font-sans">Current Utilized</span>
                 <span className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                  ₹1,060,280
+                  {formatINR(currentUtilized)}
                 </span>
               </div>
               <div className="text-right">
                 <span className="text-xs text-zinc-400 block font-sans">Ceiling Limit</span>
                 <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-                  ₹1,500,000
+                  {formatINR(ceilingLimit)}
                 </span>
               </div>
             </div>
@@ -527,13 +545,13 @@ export function DashboardPage() {
                       ? 'bg-gradient-to-r from-[#007F7C] to-[#00A8A4]'
                       : 'bg-gradient-to-r from-blue-600 to-indigo-500'
                   }`}
-                  style={{ width: '70.7%' }}
+                  style={{ width: `${limitPercentage}%` }}
                 />
               </div>
             </div>
 
             <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-              ₹439,720 remaining before threshold notification triggers.
+              {formatINR(remainingLimit)} remaining before safety limit alert.
             </p>
           </div>
 
@@ -541,7 +559,7 @@ export function DashboardPage() {
             <div>
               <span className="text-zinc-400 block text-[11px]">Daily Burn Rate</span>
               <span className="font-bold text-zinc-800 dark:text-zinc-200 font-mono">
-                ₹35,340/day
+                {formatINR(dailyBurnRate)}/day
               </span>
             </div>
             <div>
@@ -671,7 +689,7 @@ export function DashboardPage() {
 
           <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-xs">
             <span className="text-zinc-400">
-              Showing {Math.min(5, filteredActivities.length)} of {mockActivities.length} ledger activities
+              Showing {Math.min(5, filteredActivities.length)} of {liveActivities.length} ledger activities
             </span>
             <Link
               to="/activity"

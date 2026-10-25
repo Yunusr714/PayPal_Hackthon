@@ -39,9 +39,10 @@ interface Message {
 interface AIChatbotDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialQuery?: string;
 }
 
-export function AIChatbotDrawer({ open, onOpenChange }: AIChatbotDrawerProps) {
+export function AIChatbotDrawer({ open, onOpenChange, initialQuery }: AIChatbotDrawerProps) {
   const navigate = useNavigate();
   const { user, category, products, customers } = useBusiness();
 
@@ -131,6 +132,16 @@ export function AIChatbotDrawer({ open, onOpenChange }: AIChatbotDrawerProps) {
       setIsTyping(false);
     }
   };
+
+  const lastInitialQueryRef = useRef<string | null>(null);
+
+  // Auto-send query if drawer was opened via header search or preset
+  useEffect(() => {
+    if (open && initialQuery && initialQuery.trim() && initialQuery !== lastInitialQueryRef.current) {
+      lastInitialQueryRef.current = initialQuery;
+      handleSendQuery(initialQuery.trim());
+    }
+  }, [open, initialQuery]);
 
   const handleMicClick = () => {
     setIsListening(true);

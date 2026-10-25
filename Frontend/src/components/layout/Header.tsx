@@ -24,11 +24,16 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { AIChatbotDrawer } from '@/components/shared/AIChatbotDrawer';
+import { useBusiness } from '@/context/BusinessContext';
 
 export function Header() {
   const navigate = useNavigate();
+  const { category, toggleCategory } = useBusiness();
+  const isService = category === 'service';
+
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [aiInitialQuery, setAiInitialQuery] = useState('');
 
   // Keyboard shortcut (⌘K or Ctrl+K) to focus search
   useEffect(() => {
@@ -44,22 +49,66 @@ export function Header() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
-    // Default search action routes to Khata or Customers based on query
-    navigate(`/customers?q=${encodeURIComponent(searchQuery.trim())}`);
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    // Smart intent detection: if query looks like a question or dues query, route directly to AI Copilot
+    const isAiQuery = /^(who|how|what|why|is|are|any|can|give|show|tell|check|due|dues|owe|balance|repair|stitching|remind|\?)/i.test(q) || q.includes('due') || q.includes('owe') || q.includes('repair');
+
+    if (isAiQuery) {
+      setAiInitialQuery(q);
+      setIsAIOpen(true);
+    } else {
+      // Default search action routes to Khata or Customers based on query
+      navigate(`/customers?q=${encodeURIComponent(q)}`);
+    }
   };
 
   return (
     <TooltipProvider delayDuration={150}>
-      <header className="sticky top-0 z-30 flex h-16 w-full items-center px-6 lg:px-8 bg-[#F8F9FA]/80 backdrop-blur-md transition-all box-border">
+      <header className="sticky top-0 z-30 flex h-16 w-full items-center px-6 lg:px-8 bg-[#F8F9FA]/80 dark:bg-[#0B0D0E]/80 backdrop-blur-md transition-all box-border">
         <div className="mx-auto max-w-7xl w-full flex items-center justify-between">
           {/* Left: Mobile Sidebar Trigger only on small screens */}
           <div className="flex items-center gap-3 lg:hidden">
             <MobileSidebar />
           </div>
 
-          {/* Right: Search Pill + AI Copilot Button + Notifications Button */}
+          {/* Right: Workspace Mode Toggle + Search Pill + AI Copilot Button + Notifications Button */}
           <div className="flex items-center gap-3 ml-auto">
+            {/* Dual-Mode Workspace Toggle Pill */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={toggleCategory}
+                  className={`hidden sm:flex items-center gap-2 h-11 px-4 rounded-full border text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer ${
+                    isService
+                      ? 'bg-[#E6F5F5] dark:bg-[#007F7C]/20 border-[#007F7C]/40 text-[#007F7C] dark:text-[#38D5D2] hover:bg-[#d6f0f0] dark:hover:bg-[#007F7C]/30'
+                      : 'bg-blue-50 dark:bg-blue-950/40 border-blue-200/80 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 hover:bg-blue-100/70 dark:hover:bg-blue-900/40'
+                  }`}
+                  aria-label="Toggle Workspace Mode"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isService ? 'bg-teal-400' : 'bg-blue-400'}`} />
+                    <span className={`relative inline-flex rounded-full h-2 w-2 ${isService ? 'bg-[#007F7C]' : 'bg-blue-600'}`} />
+                  </span>
+                  <span>{isService ? 'Service Mode (Teal)' : 'Shop Mode (Blue)'}</span>
+                  <span className="text-[10px] opacity-60 ml-0.5">Switch ⇄</span>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                sideOffset={10}
+                className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs text-white shadow-xl"
+              >
+                <span className="font-semibold">{isService ? 'Switch to Retail Shop Mode' : 'Switch to Service Specialist Mode'}</span>
+                <p className="text-[10px] text-zinc-400">
+                  {isService
+                    ? 'Retail grocery inventory, stock deduction & counter billing'
+                    : 'Zero-inventory labor rate cards, tailoring, TV repair & work orders'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           {/* Search Pill Capsule */}
           <form
             onSubmit={handleSearchSubmit}
@@ -228,7 +277,11 @@ export function Header() {
     </header>
 
       {/* Floating Right AI Chatbot Drawer */}
-      <AIChatbotDrawer open={isAIOpen} onOpenChange={setIsAIOpen} />
+      <AIChatbotDrawer
+        open={isAIOpen}
+        onOpenChange={setIsAIOpen}
+        initialQuery={aiInitialQuery}
+      />
     </TooltipProvider>
   );
 }
