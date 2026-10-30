@@ -31,12 +31,12 @@ interface AddProductDialogProps {
 export function AddProductDialog({ open, onOpenChange, onSuccess }: AddProductDialogProps) {
   const { addProduct } = useBusiness();
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('Grains');
-  const [stock, setStock] = useState('20');
-  const [unit, setUnit] = useState('kg');
-  const [reorderLevel, setReorderLevel] = useState('5');
-  const [costPrice, setCostPrice] = useState('40');
-  const [sellingPrice, setSellingPrice] = useState('50');
+  const [category, setCategory] = useState('Shirts & Tops');
+  const [stock, setStock] = useState('15');
+  const [unit, setUnit] = useState('units');
+  const [reorderLevel, setReorderLevel] = useState('3');
+  const [costPrice, setCostPrice] = useState('450');
+  const [sellingPrice, setSellingPrice] = useState('799');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,22 +59,22 @@ export function AddProductDialog({ open, onOpenChange, onSuccess }: AddProductDi
       category,
       stock: numStock,
       unit,
-      reorderLevel: numReorder || 5,
+      reorderLevel: numReorder || 3,
       costPrice: numCost,
       sellingPrice: numSelling,
-      status: numStock <= 0 ? 'Critical' : numStock <= numReorder ? 'Low Stock' : 'In Stock',
+      status: numStock <= 0 ? 'Critical' : numStock <= (numReorder || 3) ? 'Low Stock' : 'In Stock',
     };
 
     addProduct(newProd);
 
     toast.success('Product Added to Inventory!', {
-      description: `"${newProd.name}" added with ${newProd.stock} ${newProd.unit} in stock.`,
+      description: `"${newProd.name}" (${category}) added with ${newProd.stock} ${newProd.unit} in stock.`,
     });
 
     setName('');
-    setStock('20');
-    setCostPrice('40');
-    setSellingPrice('50');
+    setStock('15');
+    setCostPrice('450');
+    setSellingPrice('799');
     onOpenChange(false);
     onSuccess?.(newProd);
   };
@@ -90,7 +90,7 @@ export function AddProductDialog({ open, onOpenChange, onSuccess }: AddProductDi
             <div>
               <DialogTitle className="text-xl font-bold text-foreground">Add New Inventory Item</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Add a physical product, set stock levels, cost price, and reorder alerts.
+                Add apparel or retail merchandise, set stock levels, cost price, and reorder alerts.
               </DialogDescription>
             </div>
           </div>
@@ -103,7 +103,7 @@ export function AddProductDialog({ open, onOpenChange, onSuccess }: AddProductDi
             </Label>
             <Input
               id="prod-name"
-              placeholder="e.g. Fortune Mustard Oil (1L) or Basmati Rice 5kg"
+              placeholder="e.g. Cotton Oxford Shirt, Silk Saree, Denim Jacket, Embroidered Kurti"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="h-10 text-sm"
@@ -116,19 +116,37 @@ export function AddProductDialog({ open, onOpenChange, onSuccess }: AddProductDi
               <Label className="text-xs font-semibold text-foreground">Category</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="h-10 text-sm">
-                  <SelectValue />
+                  <SelectValue placeholder="Select category" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Grains">Grains & Pulses</SelectItem>
-                  <SelectItem value="Oil">Edible Oil & Ghee</SelectItem>
-                  <SelectItem value="Dairy">Dairy & Eggs</SelectItem>
-                  <SelectItem value="Bakery">Bakery & Breads</SelectItem>
-                  <SelectItem value="Snacks">Snacks & Biscuits</SelectItem>
-                  <SelectItem value="Household">Household & Cleaning</SelectItem>
-                  <SelectItem value="Beverages">Beverages & Cold Drinks</SelectItem>
-                  <SelectItem value="Spices">Spices & Masalas</SelectItem>
-                  <SelectItem value="Hardware">Hardware & Tools</SelectItem>
-                  <SelectItem value="General">General Merchandise</SelectItem>
+                <SelectContent className="max-h-72">
+                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Fashion & Apparel
+                  </div>
+                  <SelectItem value="Sarees & Ethnic Wear">Sarees & Ethnic Wear</SelectItem>
+                  <SelectItem value="Kurtas & Kurtis">Kurtas & Kurtis</SelectItem>
+                  <SelectItem value="Shirts & Tops">Shirts & Tops</SelectItem>
+                  <SelectItem value="Jeans & Trousers">Jeans & Trousers</SelectItem>
+                  <SelectItem value="Dresses & Gowns">Dresses & Gowns</SelectItem>
+                  <SelectItem value="Suits & Blazers">Suits & Blazers</SelectItem>
+                  <SelectItem value="Fabrics & Cloth">Fabrics & Cloth Materials</SelectItem>
+                  <SelectItem value="Dupattas & Stoles">Dupattas & Stoles</SelectItem>
+                  <SelectItem value="Bridal & Designer">Bridal & Designer Wear</SelectItem>
+                  <SelectItem value="Kids & Baby Wear">Kids & Baby Wear</SelectItem>
+                  <SelectItem value="Fashion Accessories">Fashion Accessories & Bags</SelectItem>
+                  <SelectItem value="Footwear">Footwear & Shoes</SelectItem>
+                  <SelectItem value="General Fashion">General Fashion & Apparel</SelectItem>
+
+                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-t border-border mt-1">
+                    Retail & General Merchandise
+                  </div>
+                  <SelectItem value="General Merchandise">General Merchandise</SelectItem>
+                  <SelectItem value="Grains & Pulses">Grains & Pulses</SelectItem>
+                  <SelectItem value="Edible Oil & Ghee">Edible Oil & Ghee</SelectItem>
+                  <SelectItem value="Dairy & Bakery">Dairy & Bakery</SelectItem>
+                  <SelectItem value="Snacks & Biscuits">Snacks & Biscuits</SelectItem>
+                  <SelectItem value="Household & Cleaning">Household & Cleaning</SelectItem>
+                  <SelectItem value="Beverages & Drinks">Beverages & Drinks</SelectItem>
+                  <SelectItem value="Hardware & Tools">Hardware & Tools</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -137,15 +155,16 @@ export function AddProductDialog({ open, onOpenChange, onSuccess }: AddProductDi
               <Label className="text-xs font-semibold text-foreground">Unit of Measurement</Label>
               <Select value={unit} onValueChange={setUnit}>
                 <SelectTrigger className="h-10 text-sm">
-                  <SelectValue />
+                  <SelectValue placeholder="Select unit" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="units">Pieces / Units (pcs)</SelectItem>
+                  <SelectItem value="meters">Meters (m)</SelectItem>
+                  <SelectItem value="sets">Sets / Pairs (set)</SelectItem>
                   <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                  <SelectItem value="units">Units / Pieces (pcs)</SelectItem>
+                  <SelectItem value="packets">Packets (pkt)</SelectItem>
+                  <SelectItem value="boxes">Boxes (box)</SelectItem>
                   <SelectItem value="litres">Litres (L)</SelectItem>
-                  <SelectItem value="packets">Packets</SelectItem>
-                  <SelectItem value="bottles">Bottles</SelectItem>
-                  <SelectItem value="boxes">Boxes</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  Mail,
+  MailCheck,
   Sparkles,
   ArrowRight,
   Plus,
@@ -81,6 +83,30 @@ export function CreateInvoicePage() {
   // Submission State
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [createdResult, setCreatedResult] = useState<Invoice | null>(null);
+  const [autoSendEmail, setAutoSendEmail] = useState<boolean>(true);
+  const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
+  const [emailDispatchedTo, setEmailDispatchedTo] = useState<string | null>(null);
+
+  const handleManualSendEmail = async () => {
+    if (!createdResult) return;
+    const targetEmail = recipientEmail.trim() || createdResult.recipient_email;
+    if (!targetEmail || !targetEmail.includes('@')) {
+      toast.error('Valid recipient email address is required');
+      return;
+    }
+    setIsSendingEmail(true);
+    try {
+      await api.invoices.sendEmail(createdResult.id, targetEmail, memo.trim() || undefined);
+      setEmailDispatchedTo(targetEmail);
+      toast.success('Invoice Email Sent!', {
+        description: `Delivered official tax invoice with PayPal link to ${targetEmail}`,
+      });
+    } catch (err: any) {
+      toast.error('Email dispatch failed', { description: err.message });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   const handleApplyPreset = (presetText: string) => {
     setWorkBrief(presetText);
@@ -186,6 +212,23 @@ export function CreateInvoicePage() {
 
       const result = await createInvoice(payload, true);
       setCreatedResult(result);
+
+      if (autoSendEmail && recipientEmail.trim() && recipientEmail.includes('@')) {
+        setIsSendingEmail(true);
+        try {
+          await api.invoices.sendEmail(result.id, recipientEmail.trim(), memo.trim() || undefined);
+          setEmailDispatchedTo(recipientEmail.trim());
+          toast.success('Email Delivered to Client!', {
+            description: `Official branded invoice & PayPal checkout link dispatched to ${recipientEmail.trim()}`,
+          });
+        } catch (emailErr: any) {
+          toast.warning('Invoice created, but email dispatch failed', {
+            description: emailErr.message,
+          });
+        } finally {
+          setIsSendingEmail(false);
+        }
+      }
     } catch (err: any) {
       // Toast handled in context
     } finally {
@@ -239,7 +282,36 @@ export function CreateInvoicePage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {emailDispatchedTo ? (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                  <MailCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Email Sent to {emailDispatchedTo}</span>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSendingEmail}
+                  onClick={handleManualSendEmail}
+                  className="bg-white dark:bg-[#141518] border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 gap-1.5"
+                >
+                  {isSendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  <span>Send Email to {createdResult.recipient_email}</span>
+                </Button>
+              )}
+              {emailDispatchedTo && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={isSendingEmail}
+                  onClick={handleManualSendEmail}
+                  className="text-xs text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                >
+                  Resend
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="bg-white dark:bg-[#141518] border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/40"
@@ -433,12 +505,20 @@ export function CreateInvoicePage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Currency</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Currency</label>
+                  {currency === 'INR' && (
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                      PayPal: ~${(total / 83.5).toFixed(2)} USD
+                    </span>
+                  )}
+                </div>
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
                   className="h-9 w-full rounded-md border border-input dark:border-zinc-800 bg-transparent dark:bg-[#18191D] px-3 py-1 text-sm shadow-2xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:text-zinc-100"
                 >
+                  <option value="INR">INR (₹) - Auto-converts to USD for PayPal</option>
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
                   <option value="GBP">GBP (£)</option>
@@ -571,6 +651,26 @@ export function CreateInvoicePage() {
                 onChange={(e) => setMemo(e.target.value)}
                 className="dark:bg-[#18191D] dark:border-zinc-800 dark:text-zinc-100"
               />
+            </div>
+
+            {/* Auto Email Dispatch Option */}
+            <div className="rounded-xl border border-blue-100 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  id="autoSendEmailCheckbox"
+                  checked={autoSendEmail}
+                  onChange={(e) => setAutoSendEmail(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="autoSendEmailCheckbox" className="text-xs font-medium text-slate-700 dark:text-zinc-300 cursor-pointer flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Send official tax invoice email to <strong>{recipientEmail || 'client'}</strong> with PayPal link</span>
+                </label>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-100/80 dark:bg-blue-900/40 px-2 py-0.5 rounded-full shrink-0 w-fit">
+                abdulyunus295@gmail.com
+              </span>
             </div>
 
             {/* Action Buttons */}

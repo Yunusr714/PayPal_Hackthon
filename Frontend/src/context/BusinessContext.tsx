@@ -17,6 +17,7 @@ export interface UserProfile {
   category: BusinessCategory;
   subCategory: string;
   avatar: string;
+  logoUrl?: string;
   address?: string;
 }
 
@@ -57,18 +58,23 @@ export interface CustomerDueItem {
   notes?: string;
 }
 
+export const DG_FASHION_LOGO_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%2309090b"/><stop offset="50%" stop-color="%2318181b"/><stop offset="100%" stop-color="%2327272a"/></linearGradient><linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23d97706"/><stop offset="100%" stop-color="%23fbbf24"/></linearGradient></defs><rect width="200" height="200" rx="44" fill="url(%23bg)"/><rect x="8" y="8" width="184" height="184" rx="36" fill="none" stroke="url(%23gold)" stroke-width="2.5" opacity="0.7"/><circle cx="100" cy="82" r="44" fill="%23ffffff" fill-opacity="0.06"/><text x="100" y="96" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="44" font-weight="900" fill="%23ffffff" text-anchor="middle" letter-spacing="1">DG</text><text x="100" y="142" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="13" font-weight="800" fill="%23fbbf24" text-anchor="middle" letter-spacing="4">FASHION</text><text x="100" y="162" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="8" font-weight="700" fill="%23a1a1aa" text-anchor="middle" letter-spacing="2">EST. 2026 • STUDIO</text></svg>`;
+
+export const DEFAULT_STORE_LOGO = DG_FASHION_LOGO_SVG;
+
 // Preset personas for quick testing & demo
 export const DEMO_USERS: Record<string, UserProfile> = {
   shop_sharma: {
     id: 'user-shop-1',
-    name: 'Ramesh Sharma',
-    businessName: 'Sharma Kirana Store',
-    phone: '+91 98100 12345',
-    email: 'ramesh.kirana@example.com',
+    name: 'Dinesh G',
+    businessName: 'DG FASHION',
+    phone: '8639838847',
+    email: 'contact@dgfashion.in',
     category: 'shop',
-    subCategory: 'Kirana & FMCG Retail',
-    avatar: 'RS',
-    address: 'Shop 14, Main Market, Sector 18, Noida',
+    subCategory: 'Fashion & Apparel Retail',
+    avatar: 'DG',
+    logoUrl: DEFAULT_STORE_LOGO,
+    address: 'Shop 14, Main Market, Sector 18',
   },
   service_tailor: {
     id: 'user-service-1',
@@ -79,6 +85,7 @@ export const DEMO_USERS: Record<string, UserProfile> = {
     category: 'service',
     subCategory: 'Tailor & Designer Boutique',
     avatar: 'RK',
+    logoUrl: 'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=250&auto=format&fit=crop&q=80',
     address: 'Shop 7, Gandhi Road, Karol Bagh, Delhi',
   },
   service_plumber: {
@@ -90,396 +97,21 @@ export const DEMO_USERS: Record<string, UserProfile> = {
     category: 'service',
     subCategory: 'Plumber & Sanitary Specialist',
     avatar: 'AV',
+    logoUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=250&auto=format&fit=crop&q=80',
     address: 'Plot 42, Green Park Extension, New Delhi',
   },
 };
 
-const INITIAL_SERVICES: ServiceItem[] = [
-  {
-    id: 'srv-1',
-    name: 'Men\'s 2-Piece Suit Stitching',
-    category: 'Tailoring',
-    pricingType: 'Fixed',
-    price: 1800,
-    duration: '3-4 days',
-    description: 'Custom tailored coat and trousers with lining and interior pockets.',
-    isAvailable: true,
-  },
-  {
-    id: 'srv-2',
-    name: 'Bathroom Pipe Leak Repair & Sealing',
-    category: 'Plumbing',
-    pricingType: 'Fixed',
-    price: 450,
-    duration: '1-2 hours',
-    description: 'Full inspection of concealed leakages, sealing joint threads & pipe patch.',
-    isAvailable: true,
-  },
-  {
-    id: 'srv-3',
-    name: 'Designer Blouse Stitching & Embroidery',
-    category: 'Tailoring',
-    pricingType: 'Fixed',
-    price: 750,
-    duration: '2 days',
-    description: 'Custom pattern cuts with piping, tassels, and inner padding.',
-    isAvailable: true,
-  },
-  {
-    id: 'srv-4',
-    name: 'Water Tank & Motor Pump Installation',
-    category: 'Plumbing',
-    pricingType: 'Fixed',
-    price: 1250,
-    duration: '3 hours',
-    description: 'Complete piping, valve check, union connections, and pressure testing.',
-    isAvailable: true,
-  },
-  {
-    id: 'srv-5',
-    name: 'AC Deep Clean & Jet Pump Wash',
-    category: 'Appliance Repair',
-    pricingType: 'Fixed',
-    price: 1199,
-    duration: '2 hours',
-    description: 'Indoor coil deep foaming, outdoor condenser pressure wash, gas test.',
-    isAvailable: true,
-  },
-  {
-    id: 'srv-6',
-    name: 'Troubleshooting & Electrical Wiring',
-    category: 'Electrical',
-    pricingType: 'Hourly',
-    price: 350,
-    duration: 'Hourly',
-    description: 'MCB tripping, short circuit resolution, switchboard rewiring.',
-    isAvailable: true,
-  },
-  {
-    id: 'srv-7',
-    name: 'Pant Hemming & Urgent Alterations',
-    category: 'Tailoring',
-    pricingType: 'Per Unit',
-    price: 150,
-    duration: '30 mins',
-    description: 'Length adjustments, waist alteration, seam tightening.',
-    isAvailable: true,
-  },
-  {
-    id: 'srv-8',
-    name: 'Tap / Mixer Faucet Replacement',
-    category: 'Plumbing',
-    pricingType: 'Per Unit',
-    price: 250,
-    duration: '45 mins',
-    description: 'Removal of faulty taps and installation of new brass/quarter-turn bibcocks.',
-    isAvailable: true,
-  },
-];
+const INITIAL_SERVICES: ServiceItem[] = [];
 
-const INITIAL_JOBS: ServiceJob[] = [
-  {
-    id: 'JOB-201',
-    customerName: 'Sharma Uncle',
-    phone: '+91 98100 12345',
-    serviceName: 'Men\'s 2-Piece Suit Stitching',
-    amount: 1800,
-    status: 'In Progress',
-    date: '14 Oct 2026',
-    dueDate: '18 Oct 2026',
-    notes: 'Italian navy fabric, double vent back.',
-  },
-  {
-    id: 'JOB-202',
-    customerName: 'Priya Verma',
-    phone: '+91 98100 67890',
-    serviceName: 'Designer Blouse Stitching',
-    amount: 750,
-    status: 'Completed',
-    date: '13 Oct 2026',
-    dueDate: '15 Oct 2026',
-    notes: 'Trial done, customer ready for pickup.',
-  },
-  {
-    id: 'JOB-203',
-    customerName: 'Anil Kumar',
-    phone: '+91 98100 23456',
-    serviceName: 'Bathroom Pipe Leak Repair & Sealing',
-    amount: 450,
-    status: 'Scheduled',
-    date: '14 Oct 2026',
-    dueDate: '16 Oct 2026',
-    notes: 'Visit scheduled for 4:00 PM at sector 14.',
-  },
-  {
-    id: 'JOB-204',
-    customerName: 'Sunita Devi',
-    phone: '+91 98100 45678',
-    serviceName: 'Water Tank & Motor Pump Installation',
-    amount: 1250,
-    status: 'Delivered',
-    date: '11 Oct 2026',
-    dueDate: '12 Oct 2026',
-    notes: 'Payment collected via UPI.',
-  },
-  {
-    id: 'JOB-205',
-    customerName: 'Mohit Jain',
-    phone: '+91 98100 90123',
-    serviceName: 'AC Deep Clean & Jet Pump Wash',
-    amount: 1199,
-    status: 'In Progress',
-    date: '13 Oct 2026',
-    dueDate: '16 Oct 2026',
-    notes: 'Split AC 1.5 ton in master bedroom.',
-  },
-];
+const INITIAL_JOBS: ServiceJob[] = [];
 
-const INITIAL_SERVICE_CUSTOMERS: Customer[] = [
-  { name: 'Sharma Uncle', phone: '+91 98100 12345', totalPurchases: 2950, outstanding: 1800, behaviour: 'Good', riskScore: 35, lastVisit: '12 Oct 2026' },
-  { name: 'Anil Kumar', phone: '+91 98100 23456', totalPurchases: 1250, outstanding: 950, behaviour: 'Fair', riskScore: 68, lastVisit: '04 Oct 2026' },
-  { name: 'Priya Verma', phone: '+91 98100 67890', totalPurchases: 1450, outstanding: 750, behaviour: 'Excellent', riskScore: 18, lastVisit: '08 Oct 2026' },
-  { name: 'Vikas Mehta', phone: '+91 98100 34567', totalPurchases: 1400, outstanding: 700, behaviour: 'Good', riskScore: 28, lastVisit: '10 Oct 2026' },
-  { name: 'Rakesh Yadav', phone: '+91 98100 56789', totalPurchases: 3200, outstanding: 1800, behaviour: 'Poor', riskScore: 82, lastVisit: '20 Sep 2026' },
-  { name: 'Sunita Devi', phone: '+91 98100 45678', totalPurchases: 2850, outstanding: 0, behaviour: 'Excellent', riskScore: 8, lastVisit: '11 Oct 2026' },
-  { name: 'Mohit Jain', phone: '+91 98100 90123', totalPurchases: 2199, outstanding: 0, behaviour: 'Good', riskScore: 22, lastVisit: '11 Oct 2026' },
-  { name: 'Rahul Gupta', phone: '+91 98100 78901', totalPurchases: 1650, outstanding: 0, behaviour: 'Good', riskScore: 25, lastVisit: '09 Oct 2026' },
-  { name: 'Neha Singh', phone: '+91 98100 89012', totalPurchases: 950, outstanding: 0, behaviour: 'Excellent', riskScore: 12, lastVisit: '07 Oct 2026' },
-  { name: 'Kavita Sharma', phone: '+91 98100 11223', totalPurchases: 1800, outstanding: 0, behaviour: 'Good', riskScore: 30, lastVisit: '05 Oct 2026' },
-];
+const INITIAL_SERVICE_CUSTOMERS: Customer[] = [];
+const INITIAL_SHOP_DUES: CustomerDueItem[] = [];
 
-const INITIAL_SHOP_DUES: CustomerDueItem[] = [
-  {
-    id: 'DUE-SH101',
-    customerName: 'Sharma Uncle',
-    serviceName: 'Basmati Rice & Tata Salt Combo',
-    quantity: 1,
-    unitPrice: 340,
-    totalAmount: 340,
-    dueDate: '18 Oct 2026',
-    date: '13 Oct 2026',
-    status: 'Pending',
-    notes: 'Weekly grocery store credit billing.',
-  },
-  {
-    id: 'DUE-SH102',
-    customerName: 'Sharma Uncle',
-    serviceName: 'Aashirvaad Shudh Chakki Atta (10kg)',
-    quantity: 1,
-    unitPrice: 420,
-    totalAmount: 420,
-    dueDate: '02 Oct 2026',
-    date: '25 Sep 2026',
-    status: 'Paid',
-    notes: 'Settled via cash on 01 Oct.',
-  },
-  {
-    id: 'DUE-SH103',
-    customerName: 'Sharma Uncle',
-    serviceName: 'Fortune Sunlite Sunflower Oil (2L)',
-    quantity: 1,
-    unitPrice: 280,
-    totalAmount: 280,
-    dueDate: '20 Sep 2026',
-    date: '15 Sep 2026',
-    status: 'Paid',
-    notes: 'Paid via UPI.',
-  },
-  {
-    id: 'DUE-SH104',
-    customerName: 'Anil Kumar',
-    serviceName: 'Dal & Sugar Monthly Combo',
-    quantity: 1,
-    unitPrice: 450,
-    totalAmount: 450,
-    dueDate: '07 Oct 2026',
-    date: '30 Sep 2026',
-    status: 'Overdue',
-    notes: 'Reminder sent on WhatsApp.',
-  },
-  {
-    id: 'DUE-SH105',
-    customerName: 'Anil Kumar',
-    serviceName: 'Wheat Flour & Cooking Oil Ration',
-    quantity: 1,
-    unitPrice: 800,
-    totalAmount: 800,
-    dueDate: '16 Oct 2026',
-    date: '10 Oct 2026',
-    status: 'Pending',
-    notes: 'Kitchen ration items.',
-  },
-  {
-    id: 'DUE-SH106',
-    customerName: 'Vikas Mehta',
-    serviceName: 'Dairy, Milk Packets & Bakery Pack',
-    quantity: 1,
-    unitPrice: 540,
-    totalAmount: 540,
-    dueDate: '16 Oct 2026',
-    date: '10 Oct 2026',
-    status: 'Pending',
-    notes: 'Regular weekly credit billing.',
-  },
-  {
-    id: 'DUE-SH107',
-    customerName: 'Priya Verma',
-    serviceName: 'Tea, Biscuits & Spices Pack',
-    quantity: 1,
-    unitPrice: 180,
-    totalAmount: 180,
-    dueDate: '15 Oct 2026',
-    date: '11 Oct 2026',
-    status: 'Pending',
-    notes: 'Snack items.',
-  },
-  {
-    id: 'DUE-SH108',
-    customerName: 'Rakesh Yadav',
-    serviceName: 'Wholesale Grains & Household Detergent',
-    quantity: 1,
-    unitPrice: 2100,
-    totalAmount: 2100,
-    dueDate: '28 Sep 2026',
-    date: '15 Sep 2026',
-    status: 'Overdue',
-    notes: 'Bulk purchase credit.',
-  },
-];
+const INITIAL_SERVICE_DUES: CustomerDueItem[] = [];
 
-const INITIAL_SERVICE_DUES: CustomerDueItem[] = [
-  {
-    id: 'DUE-SV101',
-    customerName: 'Sharma Uncle',
-    serviceName: "Men's 2-Piece Suit Stitching",
-    quantity: 1,
-    unitPrice: 1800,
-    totalAmount: 1800,
-    dueDate: '18 Oct 2026',
-    date: '12 Oct 2026',
-    status: 'Pending',
-    notes: 'Italian navy fabric, balance due on trial.',
-  },
-  {
-    id: 'DUE-SV102',
-    customerName: 'Sharma Uncle',
-    serviceName: 'Pant Hemming & Urgent Alterations',
-    quantity: 2,
-    unitPrice: 150,
-    totalAmount: 300,
-    dueDate: '05 Oct 2026',
-    date: '02 Oct 2026',
-    status: 'Paid',
-    notes: 'Urgent waist fitting. Paid in cash.',
-  },
-  {
-    id: 'DUE-SV103',
-    customerName: 'Sharma Uncle',
-    serviceName: 'Designer Kurta Stitching',
-    quantity: 1,
-    unitPrice: 850,
-    totalAmount: 850,
-    dueDate: '28 Sep 2026',
-    date: '22 Sep 2026',
-    status: 'Paid',
-    notes: 'Festive embroidery. Paid via UPI.',
-  },
-  {
-    id: 'DUE-SV104',
-    customerName: 'Anil Kumar',
-    serviceName: 'Bathroom Pipe Leak Repair & Sealing',
-    quantity: 1,
-    unitPrice: 450,
-    totalAmount: 450,
-    dueDate: '07 Oct 2026',
-    date: '03 Oct 2026',
-    status: 'Overdue',
-    notes: 'Valve replacement and leak sealing.',
-  },
-  {
-    id: 'DUE-SV105',
-    customerName: 'Anil Kumar',
-    serviceName: 'Tap / Mixer Faucet Replacement',
-    quantity: 2,
-    unitPrice: 250,
-    totalAmount: 500,
-    dueDate: '10 Oct 2026',
-    date: '04 Oct 2026',
-    status: 'Pending',
-    notes: 'Kitchen sink dual taps.',
-  },
-  {
-    id: 'DUE-SV106',
-    customerName: 'Vikas Mehta',
-    serviceName: 'Troubleshooting & Electrical Wiring',
-    quantity: 2,
-    unitPrice: 350,
-    totalAmount: 700,
-    dueDate: '16 Oct 2026',
-    date: '10 Oct 2026',
-    status: 'Pending',
-    notes: '2 hours inspection and fuse replacement.',
-  },
-  {
-    id: 'DUE-SV107',
-    customerName: 'Priya Verma',
-    serviceName: 'Designer Blouse Stitching & Embroidery',
-    quantity: 1,
-    unitPrice: 750,
-    totalAmount: 750,
-    dueDate: '14 Oct 2026',
-    date: '08 Oct 2026',
-    status: 'Pending',
-    notes: 'Custom pattern cuts with piping.',
-  },
-  {
-    id: 'DUE-SV108',
-    customerName: 'Sunita Devi',
-    serviceName: 'Water Tank & Motor Pump Installation',
-    quantity: 1,
-    unitPrice: 1250,
-    totalAmount: 1250,
-    dueDate: '12 Oct 2026',
-    date: '11 Oct 2026',
-    status: 'Paid',
-    notes: 'Payment collected via UPI.',
-  },
-  {
-    id: 'DUE-SV109',
-    customerName: 'Mohit Jain',
-    serviceName: 'AC Deep Clean & Jet Pump Wash',
-    quantity: 1,
-    unitPrice: 1199,
-    totalAmount: 1199,
-    dueDate: '13 Oct 2026',
-    date: '11 Oct 2026',
-    status: 'Paid',
-    notes: 'Split AC 1.5 ton in master bedroom.',
-  },
-  {
-    id: 'DUE-SV110',
-    customerName: 'Rakesh Yadav',
-    serviceName: 'Commercial Drain Unblocking & Snaking',
-    quantity: 1,
-    unitPrice: 1800,
-    totalAmount: 1800,
-    dueDate: '28 Sep 2026',
-    date: '20 Sep 2026',
-    status: 'Overdue',
-    notes: 'Main line descaling.',
-  },
-];
-
-const INITIAL_SERVICE_SALES: Sale[] = [
-  { id: 'INV-2045', customer: 'Client Walk-in', items: "Men's 2-Piece Suit Stitching (1 unit)", amount: 1800, mode: 'UPI', status: 'Paid', date: '14 Oct 2026' },
-  { id: 'INV-2044', customer: 'Priya Verma', items: 'Designer Blouse Stitching & Embroidery (1 unit)', amount: 750, mode: 'Cash', status: 'Paid', date: '13 Oct 2026' },
-  { id: 'INV-2043', customer: 'Anil Kumar', items: 'Bathroom Pipe Leak Repair & Sealing (1 visit)', amount: 450, mode: 'UPI', status: 'Paid', date: '13 Oct 2026' },
-  { id: 'INV-2042', customer: 'Client Walk-in', items: 'Water Tank & Motor Pump Installation (1 job)', amount: 1250, mode: 'Cash', status: 'Paid', date: '12 Oct 2026' },
-  { id: 'INV-2041', customer: 'Mohit Jain', items: 'AC Deep Clean & Jet Pump Wash (1 unit)', amount: 1199, mode: 'UPI', status: 'Paid', date: '11 Oct 2026' },
-  { id: 'INV-2040', customer: 'Vikas Mehta', items: 'Troubleshooting & Electrical Wiring (2 hrs)', amount: 700, mode: 'Credit', status: 'Pending', date: '10 Oct 2026', dueDate: '16 Oct 2026' },
-  { id: 'INV-2039', customer: 'Client Walk-in', items: 'Pant Hemming & Urgent Alterations (2 units)', amount: 300, mode: 'Cash', status: 'Paid', date: '09 Oct 2026' },
-  { id: 'INV-2038', customer: 'Sunita Devi', items: 'Tap / Mixer Faucet Replacement (1 unit)', amount: 250, mode: 'Cash', status: 'Paid', date: '08 Oct 2026' },
-];
+const INITIAL_SERVICE_SALES: Sale[] = [];
 
 interface BusinessContextType {
   user: UserProfile;
@@ -493,6 +125,8 @@ interface BusinessContextType {
   setCategory: (category: BusinessCategory) => void;
   toggleCategory: () => void;
   loginUser: (profile: UserProfile) => void;
+  logoutUser: () => void;
+  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
   registerUser: (data: {
     name: string;
     businessName: string;
@@ -500,6 +134,7 @@ interface BusinessContextType {
     email: string;
     category: BusinessCategory;
     subCategory: string;
+    logoUrl?: string;
     address?: string;
   }) => UserProfile;
   loadDemoUser: (key: keyof typeof DEMO_USERS) => void;
@@ -555,16 +190,55 @@ const STORAGE_KEYS = {
   SERVICE_SALES: 'cashiko_service_sales',
 };
 
+// Purge legacy cached dummy grocery, services, and old test items
+if (typeof window !== 'undefined') {
+  const SYNC_VERSION = 'cashiko_v7_fresh_start';
+  if (localStorage.getItem(SYNC_VERSION) !== 'true') {
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem('cashiko_user');
+    localStorage.removeItem('cashiko_registered_user');
+    localStorage.removeItem('cashiko_accounts');
+    localStorage.removeItem(STORAGE_KEYS.SERVICES);
+    localStorage.removeItem(STORAGE_KEYS.JOBS);
+    localStorage.removeItem(STORAGE_KEYS.CUSTOMERS);
+    localStorage.removeItem(STORAGE_KEYS.PRODUCTS);
+    localStorage.removeItem(STORAGE_KEYS.SHOP_DUES);
+    localStorage.removeItem(STORAGE_KEYS.SHOP_SALES);
+    localStorage.removeItem(STORAGE_KEYS.SERVICE_DUES);
+    localStorage.removeItem(STORAGE_KEYS.SERVICE_SALES);
+    localStorage.setItem(SYNC_VERSION, 'true');
+  }
+}
+
 export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load user
   const [user, setUser] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.USER);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.name && parsed.phone) {
+          if (!parsed.logoUrl || parsed.logoUrl.includes('unsplash.com')) {
+            parsed.logoUrl = DEFAULT_STORE_LOGO;
+          }
+          return parsed;
+        }
+      }
     } catch (e) {
       console.error(e);
     }
-    return DEMO_USERS.shop_sharma;
+    return {
+      id: '',
+      name: '',
+      businessName: '',
+      phone: '',
+      email: '',
+      category: 'shop',
+      subCategory: '',
+      avatar: 'CS',
+      logoUrl: DEFAULT_STORE_LOGO,
+      address: '',
+    };
   });
 
   // Services state
@@ -661,9 +335,33 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const refreshData = useCallback(async () => {
     try {
       setIsSyncing(true);
-      // 1. Fetch Customers
+
+      // 0. Fetch Merchant Profile directly from SQLite DB for the active user
+      try {
+        const activeIdentifier = user?.phone || user?.email;
+        if (activeIdentifier) {
+          const profile = await api.settings.getMerchantProfile(activeIdentifier);
+          if (profile && profile.business_name) {
+            setUser(prev => ({
+              ...prev,
+              businessName: profile.business_name || prev.businessName,
+              name: profile.owner_name || prev.name,
+              phone: profile.phone || prev.phone,
+              email: profile.email || prev.email,
+              category: (profile.category as BusinessCategory) || prev.category,
+              subCategory: profile.sub_category || prev.subCategory,
+              logoUrl: (profile.logo_url && !profile.logo_url.includes('unsplash.com')) ? profile.logo_url : (prev.logoUrl || DEFAULT_STORE_LOGO),
+              avatar: profile.owner_name ? profile.owner_name.slice(0, 2).toUpperCase() : prev.avatar,
+            }));
+          }
+        }
+      } catch (profileErr) {
+        console.warn('Merchant profile not found or offline:', profileErr);
+      }
+
+      // 1. Fetch Customers directly from SQLite DB
       const dbCustomers = await api.customers.list();
-      if (Array.isArray(dbCustomers) && dbCustomers.length > 0) {
+      if (Array.isArray(dbCustomers)) {
         const mapped: Customer[] = dbCustomers.map((c: any) => ({
           id: c.id,
           name: c.name,
@@ -679,7 +377,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCustomers(mapped);
       }
 
-      // 2. Fetch Catalog Items
+      // 2. Fetch Catalog Items directly from SQLite DB
       const dbCatalog = await api.catalog.list();
       if (Array.isArray(dbCatalog) && dbCatalog.length > 0) {
         const dbServices: ServiceItem[] = dbCatalog
@@ -702,47 +400,83 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             name: p.name,
             category: p.sub_category || 'Retail',
             stock: Number(p.stock_quantity) || 0,
-            unit: 'units',
+            unit: 'pcs',
             reorderLevel: 5,
-            costPrice: Math.round((Number(p.price) || 0) * 0.75),
+            costPrice: Math.round((Number(p.price) || 0) * 0.6),
             sellingPrice: Number(p.price) || 0,
             status: (Number(p.stock_quantity) || 0) <= 0 ? 'Critical' : (Number(p.stock_quantity) || 0) <= 5 ? 'Low Stock' : 'In Stock',
           }));
         if (dbProducts.length > 0) setProducts(dbProducts);
       }
 
-      // 3. Fetch Sales & Dues
+      // 3. Fetch Sales & Dues directly from SQLite DB
       const dbSales = await api.sales.list();
-      if (Array.isArray(dbSales) && dbSales.length > 0) {
-        const mappedSales: Sale[] = dbSales.map((s: any) => ({
-          id: s.id.startsWith('INV-') ? s.id : `INV-${s.id.slice(0, 6).toUpperCase()}`,
-          customer: s.customer_name,
-          items: s.item_name,
-          amount: Number(s.total_amount) || 0,
-          mode: (s.payment_mode === 'PAYPAL' ? 'PayPal' : s.payment_mode === 'CREDIT' ? 'Credit' : s.payment_mode === 'UPI' ? 'UPI' : 'Cash') as PaymentMode,
-          status: (s.status === 'PAID' || s.status === 'COMPLETED' || s.status === 'DELIVERED' ? 'Paid' : s.status === 'OVERDUE' ? 'Overdue' : 'Pending') as SaleStatus,
-          date: s.date || 'Today',
-          dueDate: s.due_date,
-        }));
-        setShopSales(mappedSales);
-        setServiceSales(mappedSales);
+      if (Array.isArray(dbSales)) {
+        // Strictly isolate shop sales from service sales
+        const shopOnlySales: Sale[] = dbSales
+          .filter((s: any) => (s.category_type || 'shop').toLowerCase() === 'shop')
+          .map((s: any) => ({
+            id: s.id.startsWith('INV-') ? s.id : `INV-${s.id.slice(0, 6).toUpperCase()}`,
+            customer: s.customer_name,
+            items: s.item_name,
+            amount: Number(s.total_amount) || 0,
+            mode: (s.payment_mode === 'PAYPAL' ? 'PayPal' : s.payment_mode === 'CREDIT' ? 'Credit' : s.payment_mode === 'UPI' ? 'UPI' : 'Cash') as PaymentMode,
+            status: (s.status === 'PAID' || s.status === 'COMPLETED' || s.status === 'DELIVERED' ? 'Paid' : s.status === 'OVERDUE' ? 'Overdue' : 'Pending') as SaleStatus,
+            date: s.date || 'Today',
+            dueDate: s.due_date,
+          }));
 
-        // Map credit/pending sales to CustomerDueItem
+        const serviceOnlySales: Sale[] = dbSales
+          .filter((s: any) => (s.category_type || '').toLowerCase() === 'service')
+          .map((s: any) => ({
+            id: s.id.startsWith('INV-') ? s.id : `INV-${s.id.slice(0, 6).toUpperCase()}`,
+            customer: s.customer_name,
+            items: s.item_name,
+            amount: Number(s.total_amount) || 0,
+            mode: (s.payment_mode === 'PAYPAL' ? 'PayPal' : s.payment_mode === 'CREDIT' ? 'Credit' : s.payment_mode === 'UPI' ? 'UPI' : 'Cash') as PaymentMode,
+            status: (s.status === 'PAID' || s.status === 'COMPLETED' || s.status === 'DELIVERED' ? 'Paid' : s.status === 'OVERDUE' ? 'Overdue' : 'Pending') as SaleStatus,
+            date: s.date || 'Today',
+            dueDate: s.due_date,
+          }));
+
+        setShopSales(shopOnlySales);
+        setServiceSales(serviceOnlySales);
+
+        // Map credit/pending sales to CustomerDueItem strictly per category
         const creditSales = dbSales.filter((s: any) => s.payment_mode === 'CREDIT' || s.status === 'PENDING' || s.status === 'OVERDUE');
-        const mappedDues: CustomerDueItem[] = creditSales.map((s: any) => ({
-          id: s.id,
-          customerName: s.customer_name,
-          serviceName: s.item_name,
-          quantity: Number(s.quantity) || 1,
-          unitPrice: Number(s.unit_price) || Number(s.total_amount) || 0,
-          totalAmount: Number(s.total_amount) || 0,
-          dueDate: s.due_date || '18 Oct 2026',
-          date: s.date || 'Today',
-          status: (s.status === 'PAID' || s.status === 'COMPLETED' ? 'Paid' : s.status === 'OVERDUE' ? 'Overdue' : 'Pending') as any,
-          notes: s.notes,
-        }));
-        setShopDues(mappedDues);
-        setServiceDues(mappedDues);
+
+        const shopOnlyDues: CustomerDueItem[] = creditSales
+          .filter((s: any) => (s.category_type || 'shop').toLowerCase() === 'shop')
+          .map((s: any) => ({
+            id: s.id,
+            customerName: s.customer_name,
+            serviceName: s.item_name,
+            quantity: Number(s.quantity) || 1,
+            unitPrice: Number(s.unit_price) || Number(s.total_amount) || 0,
+            totalAmount: Number(s.total_amount) || 0,
+            dueDate: s.due_date || '18 Oct 2026',
+            date: s.date || 'Today',
+            status: (s.status === 'PAID' || s.status === 'COMPLETED' ? 'Paid' : s.status === 'OVERDUE' ? 'Overdue' : 'Pending') as any,
+            notes: s.notes,
+          }));
+
+        const serviceOnlyDues: CustomerDueItem[] = creditSales
+          .filter((s: any) => (s.category_type || '').toLowerCase() === 'service')
+          .map((s: any) => ({
+            id: s.id,
+            customerName: s.customer_name,
+            serviceName: s.item_name,
+            quantity: Number(s.quantity) || 1,
+            unitPrice: Number(s.unit_price) || Number(s.total_amount) || 0,
+            totalAmount: Number(s.total_amount) || 0,
+            dueDate: s.due_date || '18 Oct 2026',
+            date: s.date || 'Today',
+            status: (s.status === 'PAID' || s.status === 'COMPLETED' ? 'Paid' : s.status === 'OVERDUE' ? 'Overdue' : 'Pending') as any,
+            notes: s.notes,
+          }));
+
+        setShopDues(shopOnlyDues);
+        setServiceDues(serviceOnlyDues);
       }
     } catch (e) {
       console.warn('Backend sync initializing or offline:', e);
@@ -805,18 +539,94 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const toggleCategory = () => {
-    setUser((prev) => {
-      const nextCategory: BusinessCategory = prev.category === 'shop' ? 'service' : 'shop';
-      return {
-        ...prev,
-        category: nextCategory,
-        subCategory: nextCategory === 'service' ? 'Service Specialist (Tailor / Plumber)' : 'Kirana & Retail Store',
-      };
-    });
+    // Mode toggle is disabled: A user remains strictly in their registered business mode
+    console.warn('Mode switching is disabled. A business operates in its registered mode.');
   };
 
   const loginUser = (profile: UserProfile) => {
     setUser(profile);
+  };
+
+  const logoutUser = () => {
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem('cashiko_user');
+    localStorage.removeItem('cashiko_registered_user');
+    setUser({
+      id: '',
+      name: '',
+      businessName: '',
+      phone: '',
+      email: '',
+      category: 'shop',
+      subCategory: '',
+      avatar: 'CS',
+      logoUrl: DEFAULT_STORE_LOGO,
+      address: '',
+    });
+  };
+
+  const updateUserProfile = async (updates: Partial<UserProfile>): Promise<void> => {
+    setUser((prev) => {
+      const updated: UserProfile = {
+        ...prev,
+        ...updates,
+        avatar: updates.name
+          ? updates.name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2) || 'CS'
+          : prev.avatar,
+      };
+      try {
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+
+    // Keep multi-account registry in cashiko_accounts synchronized
+    try {
+      const rawAccounts = localStorage.getItem('cashiko_accounts');
+      if (rawAccounts) {
+        const accounts = JSON.parse(rawAccounts);
+        const updatedAccounts = accounts.map((acc: any) => {
+          if (
+            (user.id && acc.id === user.id) ||
+            (user.phone && acc.phone === user.phone) ||
+            (user.email && acc.email === user.email)
+          ) {
+            return {
+              ...acc,
+              ...updates,
+              name: updates.name ?? acc.name,
+              businessName: updates.businessName ?? acc.businessName,
+              phone: updates.phone ?? acc.phone,
+              email: updates.email ?? acc.email,
+              address: updates.address ?? acc.address,
+            };
+          }
+          return acc;
+        });
+        localStorage.setItem('cashiko_accounts', JSON.stringify(updatedAccounts));
+      }
+    } catch (e) {
+      console.error('Failed to sync accounts in localStorage:', e);
+    }
+
+    // Persist to SQLite DB via API
+    try {
+      await api.settings.updateMerchantProfile({
+        id: user.id || undefined,
+        business_name: updates.businessName ?? user.businessName,
+        owner_name: updates.name ?? user.name,
+        phone: updates.phone ?? user.phone,
+        email: updates.email ?? user.email,
+        category: updates.category ?? user.category,
+        sub_category: updates.subCategory ?? user.subCategory,
+        logo_url: updates.logoUrl ?? user.logoUrl,
+        address: updates.address ?? user.address,
+      });
+    } catch (err) {
+      console.warn('Backend profile update failed:', err);
+    }
   };
 
   const loadDemoUser = (key: keyof typeof DEMO_USERS) => {
@@ -832,6 +642,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     email: string;
     category: BusinessCategory;
     subCategory: string;
+    logoUrl?: string;
     address?: string;
   }): UserProfile => {
     const initials = data.name
@@ -839,7 +650,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .map((w) => w[0])
       .join('')
       .toUpperCase()
-      .slice(0, 2) || 'US';
+      .slice(0, 2) || 'CS';
 
     const newUser: UserProfile = {
       id: `user-${Date.now()}`,
@@ -848,8 +659,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       phone: data.phone,
       email: data.email,
       category: data.category,
-      subCategory: data.subCategory || (data.category === 'shop' ? 'Retail Store' : 'Service Provider'),
+      subCategory: data.subCategory || (data.category === 'shop' ? 'Fashion & Apparel Retail' : 'Service Provider'),
       avatar: initials,
+      logoUrl: data.logoUrl,
       address: data.address || '',
     };
     setUser(newUser);
@@ -964,7 +776,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const isService = user.category === 'service';
-  const activeCustomers = customers;
+  const activeCustomers = customers.filter((c) => {
+    const cat = (c.category || 'both').toLowerCase();
+    return isService ? (cat === 'service' || cat === 'both') : (cat === 'shop' || cat === 'both');
+  });
   const activeDues = isService ? serviceDues : shopDues;
   const activeSales = isService ? serviceSales : shopSales;
 
@@ -1082,9 +897,8 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const getDuesForCustomer = (customerName: string): CustomerDueItem[] => {
-    const combined = [...serviceDues, ...shopDues];
     const uniqueMap = new Map<string, CustomerDueItem>();
-    for (const d of combined) {
+    for (const d of activeDues) {
       if (!uniqueMap.has(d.id)) {
         uniqueMap.set(d.id, d);
       }
@@ -1151,6 +965,8 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCategory,
         toggleCategory,
         loginUser,
+        logoutUser,
+        updateUserProfile,
         registerUser,
         loadDemoUser,
         addService,

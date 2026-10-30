@@ -59,11 +59,53 @@ const teamMembers = [
 ];
 
 export function SettingsPage() {
-  const { user, category, toggleCategory } = useBusiness();
+  const { user, category, updateUserProfile } = useBusiness();
   const [whatsapp, setWhatsapp] = useState(true);
   const [lowStock, setLowStock] = useState(true);
   const [aiReminders, setAiReminders] = useState(true);
   const [paypalSandbox, setPaypalSandbox] = useState(true);
+
+  // Business Profile Form State
+  const [contactPerson, setContactPerson] = useState(user.name);
+  const [businessName, setBusinessName] = useState(user.businessName);
+  const [phone, setPhone] = useState(user.phone);
+  const [email, setEmail] = useState(user.email);
+  const [address, setAddress] = useState(user.address || '');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setContactPerson(user.name);
+    setBusinessName(user.businessName);
+    setPhone(user.phone);
+    setEmail(user.email);
+    setAddress(user.address || '');
+  }, [user]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanBName = businessName.trim();
+    if (!cleanBName) {
+      toast.error('Please enter a business name');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await updateUserProfile({
+        name: contactPerson.trim(),
+        businessName: cleanBName,
+        phone: phone.trim(),
+        email: email.trim(),
+        address: address.trim(),
+      });
+      toast.success('Business Profile Updated!', {
+        description: `Saved business name as "${cleanBName}".`,
+      });
+    } catch (err: any) {
+      toast.error('Failed to update business profile', { description: err.message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Live PayPal Sandbox & Groq status
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
@@ -265,42 +307,69 @@ export function SettingsPage() {
               <CardDescription className="text-xs">Update your store/studio details</CardDescription>
             </CardHeader>
             <CardContent>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  toast.success('Changes saved', { description: 'Business profile updated.' });
-                }}
-                className="space-y-4"
-              >
+              <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">Contact Person</Label>
-                    <Input defaultValue={user.name} className="text-xs" />
+                    <Input
+                      value={contactPerson}
+                      onChange={(e) => setContactPerson(e.target.value)}
+                      placeholder="e.g. Ramesh Kumar"
+                      className="text-xs"
+                      required
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">Business Name</Label>
-                    <Input defaultValue={user.businessName} className="text-xs" />
+                    <Input
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder="e.g. Vogue Style Studio"
+                      className="text-xs font-semibold"
+                      required
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">Phone Number</Label>
-                    <Input defaultValue={user.phone} className="text-xs" />
+                    <Input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. 9876543210"
+                      className="text-xs"
+                      required
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">Business Email</Label>
-                    <Input defaultValue={user.email} className="text-xs" />
+                    <Input
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. contact@business.in"
+                      className="text-xs"
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Address</Label>
-                  <Input defaultValue={user.address || 'Main Street Market, Sector 18'} className="text-xs" />
+                  <Input
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="e.g. Shop 14, Main Market, Sector 18"
+                    className="text-xs"
+                  />
                 </div>
 
-                <Button type="submit" className="bg-primary text-primary-foreground font-semibold text-xs shadow-xs">
-                  <Save className="h-4 w-4 mr-1.5" /> Save Changes
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  className="bg-primary text-primary-foreground font-semibold text-xs shadow-xs"
+                >
+                  {isSaving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
+                  Save Changes
                 </Button>
               </form>
             </CardContent>

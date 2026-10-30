@@ -35,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useBusiness } from '@/context/BusinessContext';
+import { useBusiness, DG_FASHION_LOGO_SVG } from '@/context/BusinessContext';
 import { useReceivables } from '@/context/ReceivablesContext';
 
 /**
@@ -84,7 +84,7 @@ interface NavItemConfig {
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, category, toggleCategory } = useBusiness();
+  const { user, category, logoutUser } = useBusiness();
   const { connectionStatus, checkConnection } = useReceivables();
 
   const isService = category === 'service';
@@ -345,41 +345,6 @@ export function Sidebar() {
               </TooltipContent>
             </Tooltip>
 
-            {/* PayPal Sandbox Status using Reicon ShieldCheck */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => checkConnection()}
-                  className="group flex h-10 w-10 items-center justify-center rounded-full text-zinc-500 hover:text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all duration-200 relative"
-                  aria-label="PayPal Sandbox Status"
-                >
-                  <ShieldCheck size={20} className="shrink-0" />
-                  <span
-                    className={cn(
-                      'absolute top-1.5 right-1.5 h-2 w-2 rounded-full ring-2 ring-white',
-                      isPayPalReady ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-                    )}
-                  />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                sideOffset={14}
-                className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs text-white shadow-2xl"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={cn(
-                      'h-2 w-2 rounded-full',
-                      isPayPalReady ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-                    )}
-                  />
-                  <span className="font-semibold text-zinc-100">PayPal Sandbox v2</span>
-                </div>
-                <p className="text-[10px] text-zinc-400">Live API Connection</p>
-              </TooltipContent>
-            </Tooltip>
 
             {/* User Profile Avatar at Bottom of Capsule */}
             <DropdownMenu>
@@ -391,8 +356,15 @@ export function Sidebar() {
                       className="group relative mt-1 flex h-10 w-10 items-center justify-center rounded-full ring-2 ring-zinc-200/90 hover:ring-zinc-900 transition-all duration-200 overflow-hidden shadow-xs active:scale-95 focus:outline-none"
                       aria-label="User Profile"
                     >
-                      <div className="flex h-full w-full items-center justify-center font-bold text-xs text-white bg-gradient-to-br from-zinc-800 to-zinc-950 transition-transform group-hover:scale-105">
-                        {user.avatar || 'CS'}
+                      <div className="flex h-full w-full items-center justify-center font-bold text-xs text-white bg-gradient-to-br from-zinc-800 to-zinc-950 transition-transform group-hover:scale-105 overflow-hidden">
+                        <img
+                          src={user.logoUrl || DG_FASHION_LOGO_SVG}
+                          alt={user.businessName}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = DG_FASHION_LOGO_SVG;
+                          }}
+                        />
                       </div>
                     </button>
                   </DropdownMenuTrigger>
@@ -411,12 +383,19 @@ export function Sidebar() {
                 side="right"
                 align="end"
                 sideOffset={16}
-                className="w-56 rounded-2xl border border-zinc-200/80 bg-white p-2 shadow-2xl"
+                className="w-56 rounded-2xl border border-zinc-200/80 bg-white dark:bg-[#141518] p-2 shadow-2xl"
               >
                 <DropdownMenuLabel className="px-2.5 py-2">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl font-bold text-xs text-white bg-zinc-900">
-                      {user.avatar || 'CS'}
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl font-bold text-xs text-white bg-zinc-900 shrink-0 overflow-hidden">
+                      <img
+                        src={user.logoUrl || DG_FASHION_LOGO_SVG}
+                        alt={user.businessName}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DG_FASHION_LOGO_SVG;
+                        }}
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-bold text-zinc-900">{user.name}</p>
@@ -427,13 +406,13 @@ export function Sidebar() {
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem
-                  onClick={toggleCategory}
-                  className="rounded-lg px-2.5 py-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer flex items-center gap-2.5"
-                >
-                  <span className={`h-2.5 w-2.5 rounded-full ${isService ? 'bg-blue-600' : 'bg-[#007F7C]'}`} />
-                  Switch to {isService ? 'Shop Mode (Blue)' : 'Service Mode (Teal)'}
-                </DropdownMenuItem>
+                <div className="px-2.5 py-1.5 flex items-center justify-between text-[11px] font-semibold rounded-lg bg-zinc-50 dark:bg-zinc-800/50 my-1">
+                  <span className="text-zinc-500 dark:text-zinc-400">Business Mode</span>
+                  <span className={`flex items-center gap-1.5 ${isService ? 'text-[#007F7C] dark:text-[#38D5D2]' : 'text-blue-600 dark:text-blue-400'}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${isService ? 'bg-[#007F7C]' : 'bg-blue-600'}`} />
+                    {isService ? 'Service Mode' : 'Shop Mode'}
+                  </span>
+                </div>
 
                 <DropdownMenuItem
                   onClick={() => navigate('/settings')}
@@ -452,7 +431,10 @@ export function Sidebar() {
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
-                  onClick={() => navigate('/login')}
+                  onClick={() => {
+                    logoutUser();
+                    navigate('/login');
+                  }}
                   className="rounded-lg px-2.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 cursor-pointer flex items-center gap-2.5"
                 >
                   <Logout size={16} className="text-red-500" />
@@ -474,7 +456,8 @@ export function Sidebar() {
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const { user, category, toggleCategory } = useBusiness();
+  const navigate = useNavigate();
+  const { user, category, logoutUser } = useBusiness();
   const isService = category === 'service';
 
   const navItems = [
@@ -571,22 +554,35 @@ export function MobileSidebar() {
 
           {/* Footer info & Mode Toggle */}
           <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#18191D]/50 space-y-2">
-            <button
-              type="button"
-              onClick={toggleCategory}
-              className={`w-full py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-between ${
+            <div
+              className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-between ${
                 isService
                   ? 'bg-[#E6F5F5] dark:bg-[#007F7C]/20 border-[#007F7C]/40 text-[#007F7C] dark:text-[#38D5D2]'
                   : 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 text-blue-700 dark:text-blue-300'
               }`}
             >
-              <span>{isService ? 'Service Mode' : 'Shop Mode'}</span>
-              <span className="text-[10px] opacity-75">Switch ⇄</span>
-            </button>
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${isService ? 'bg-[#007F7C]' : 'bg-blue-600'}`} />
+                <span>{isService ? 'Service Business Mode' : 'Retail Shop Mode'}</span>
+              </div>
+              <span className="text-[10px] opacity-60 font-normal">Active</span>
+            </div>
             <div className="flex items-center justify-between px-1 text-[10px] text-zinc-500 dark:text-zinc-400">
               <span className="font-semibold">{user.businessName}</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">PayPal Sandbox v2</span>
+              <span className="text-zinc-400">{user.name}</span>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                logoutUser();
+                navigate('/login');
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium text-red-600 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 transition-colors"
+            >
+              <Logout size={14} className="text-red-500" />
+              Sign Out
+            </button>
           </div>
         </div>
       </SheetContent>

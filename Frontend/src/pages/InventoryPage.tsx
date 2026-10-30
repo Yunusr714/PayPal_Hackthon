@@ -3,22 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Package, AlertTriangle, PackageX, IndianRupee, Plus,
-  Scissors, RefreshCw, Sparkles, MoreHorizontal, Search, CheckCircle2,
+  Scissors, Sparkles, MoreHorizontal, Search, CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { KPICard } from '@/components/shared/KPICard';
-import { ChartCard } from '@/components/shared/ChartCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { GaugeChart } from '@/components/shared/Charts';
 import { AddProductDialog } from '@/components/shared/AddProductDialog';
 import { useBusiness } from '@/context/BusinessContext';
 import { formatINR } from '@/data/mock-data';
 
 export function InventoryPage() {
   const navigate = useNavigate();
-  const { products, category, toggleCategory } = useBusiness();
+  const { products, category } = useBusiness();
   const [search, setSearch] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
 
@@ -28,7 +26,6 @@ export function InventoryPage() {
 
   const lowStockCount = products.filter((p) => p.status === 'Low Stock').length;
   const criticalCount = products.filter((p) => p.status === 'Critical').length;
-  const healthyCount = products.filter((p) => p.status === 'In Stock').length;
   const totalValue = products.reduce((acc, p) => acc + p.stock * p.sellingPrice, 0);
 
   const kpiCards = [
@@ -76,14 +73,6 @@ export function InventoryPage() {
               >
                 Go to Services & Rates
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={toggleCategory}
-                className="border-slate-300 text-slate-700 text-xs font-medium"
-              >
-                <RefreshCw className="mr-1 h-3 w-3" /> Switch to Shop Mode
-              </Button>
             </div>
           </div>
         </div>
@@ -95,30 +84,7 @@ export function InventoryPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <ChartCard
-          title="Inventory Health"
-          subtitle="Overall stock status"
-          className="lg:col-span-2 rounded-2xl"
-        >
-          <GaugeChart value={78} label="Healthy" height={220} />
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between rounded-xl bg-success/10 px-3.5 py-2">
-              <span className="text-xs font-medium text-foreground">Healthy Products</span>
-              <span className="text-xs font-bold text-success">{healthyCount}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-xl bg-warning/10 px-3.5 py-2">
-              <span className="text-xs font-medium text-foreground">Low Stock</span>
-              <span className="text-xs font-bold text-warning">{lowStockCount}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-xl bg-destructive/10 px-3.5 py-2">
-              <span className="text-xs font-medium text-foreground">Critical</span>
-              <span className="text-xs font-bold text-destructive">{criticalCount}</span>
-            </div>
-          </div>
-        </ChartCard>
-
-        <Card className="rounded-2xl border-border shadow-sm lg:col-span-3">
+      <Card className="rounded-2xl border-border shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
@@ -192,9 +158,8 @@ export function InventoryPage() {
             </Table>
           </CardContent>
         </Card>
-      </div>
 
-      <AddProductDialog
+        <AddProductDialog
         open={isAddOpen}
         onOpenChange={setIsAddOpen}
       />

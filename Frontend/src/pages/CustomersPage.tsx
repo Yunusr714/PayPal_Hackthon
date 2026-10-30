@@ -21,7 +21,6 @@ export function CustomersPage() {
   const { customers, addCustomer, isSyncing, user } = useBusiness();
   const [search, setSearch] = useState('');
   const [riskFilter, setRiskFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
 
   // Add Customer modal state
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -69,11 +68,9 @@ export function CustomersPage() {
       const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search);
       const risk = c.riskScore < 30 ? 'Low' : c.riskScore < 60 ? 'Medium' : 'High';
       const matchRisk = riskFilter === 'all' || risk === riskFilter;
-      const custCat = (c.category || 'both').toLowerCase();
-      const matchCat = categoryFilter === 'all' || custCat === categoryFilter.toLowerCase() || custCat === 'both';
-      return matchSearch && matchRisk && matchCat;
+      return matchSearch && matchRisk;
     });
-  }, [customers, search, riskFilter, categoryFilter]);
+  }, [customers, search, riskFilter]);
 
   const handleCardClick = (customerName: string) => {
     navigate(`/customers/${encodeURIComponent(customerName)}`);
@@ -127,16 +124,6 @@ export function CustomersPage() {
               className="h-9 w-full rounded-xl border border-input bg-white pl-9 pr-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full sm:w-36 h-9 text-xs rounded-xl">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Profiles</SelectItem>
-              <SelectItem value="service">Service Clients</SelectItem>
-              <SelectItem value="shop">Retail Customers</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={riskFilter} onValueChange={setRiskFilter}>
             <SelectTrigger className="w-full sm:w-36 h-9 text-xs rounded-xl">
               <SelectValue placeholder="Risk Level" />
@@ -200,19 +187,7 @@ export function CustomersPage() {
                 className="text-xs h-9 rounded-xl"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-700">Customer Category</Label>
-              <Select value={newCustCategory} onValueChange={setNewCustCategory}>
-                <SelectTrigger className="w-full h-9 text-xs rounded-xl">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="service">Service Client (Tailoring / Repair / Services)</SelectItem>
-                  <SelectItem value="shop">Retail Customer (Kirana / Store Sales)</SelectItem>
-                  <SelectItem value="both">Both (Service & Retail)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
             <DialogFooter className="pt-2 gap-2">
               <Button
                 type="button"
@@ -287,14 +262,21 @@ export function CustomersPage() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
+        <div className="rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#141518] p-12 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-3">
             <UserCheck className="h-6 w-6" />
           </div>
-          <h3 className="text-sm font-bold text-slate-800">No customers found</h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Try adjusting your search query or category filter.
+          <h3 className="text-sm font-bold text-slate-800 dark:text-zinc-100">No customers registered yet</h3>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+            Your customer ledger is empty and ready for real data. Add your first customer to track khata dues and generate PayPal payment reminders.
           </p>
+          <Button
+            onClick={() => setIsAddOpen(true)}
+            size="sm"
+            className="mt-4 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-xl"
+          >
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Add First Customer
+          </Button>
         </div>
       )}
     </div>

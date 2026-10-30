@@ -35,7 +35,7 @@ flowchart LR
    - *"Merchants don't have time to manually fill 15 fields in traditional invoicing software. Watch how Cashiko takes raw client conversation."*
 3. **Action**: Click the preset button **"Client Brief: Tailoring & Design"** or paste this text:
    ```text
-   Hi Sharmaji, please bill Vikram Sen (vikram.sen@techcraft.in) for custom designer sherwani tailoring with pure silk inner lining. Total agreed amount is 4200 rupees, due by next Sunday.
+   Hi Abdul Yunus, please bill Venkata Krishna (venkatakrishnac60@gmail.com) for booking of lenin shirt. Total agreed amount is ₹1,300, due by next Sunday.
    ```
 4. **Click**: **"Generate Structured Invoice Draft"**.
 5. **What Happens Live**:
@@ -62,7 +62,7 @@ flowchart LR
    - *"Merchants constantly receive messages like 'Salary delayed, will pay next week' or 'Why did you charge ₹400 for delivery?'. Our Reply Copilot classifies intent and generates professional responses."*
 3. **Action**: Select any incoming message card or paste:
    ```text
-   Namaste, my company salary got credited late this month. Can I pay half the invoice today and remaining next Friday?
+   Hello Abdul Yunus, my company salary got credited late this month. Can I pay half the invoice of lenin shirt today and remaining next Friday?
    ```
 4. **Click**: **"Analyze & Draft AI Response"**.
 5. **What Happens Live**:

@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     PAYPAL_CLIENT_SECRET: Optional[str] = None
     PAYPAL_WEBHOOK_ID: Optional[str] = None
     
+    # Fallback Merchant / Store Profile Defaults (Overridden dynamically by active registered user / DB)
+    MERCHANT_BUSINESS_NAME: str = "Cashiko Merchant"
+    MERCHANT_LOGO_URL: str = "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=250&auto=format&fit=crop&q=80"
+    MERCHANT_WEBSITE: str = "https://cashiko.io"
+    MERCHANT_EMAIL: str = ""
+    MERCHANT_CONTACT_NAME: str = "Business Owner"
+    
     @property
     def PAYPAL_BASE_URL(self) -> str:
         if self.PAYPAL_MODE == "live":
@@ -47,6 +54,18 @@ class Settings(BaseSettings):
             return bool(self.OPENAI_API_KEY)
         return False
     
+    # SMTP Email Configuration
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = "abdulyunus295@gmail.com"
+    SMTP_PASSWORD: Optional[str] = "smxo hltj qtjb hkut"
+    SMTP_FROM_EMAIL: Optional[str] = "abdulyunus295@gmail.com"
+    SMTP_FROM_NAME: str = "Cashiko Invoicing"
+
+    @property
+    def is_smtp_configured(self) -> bool:
+        return bool(self.SMTP_USER and self.SMTP_PASSWORD)
+
     # CORS
     CORS_ORIGINS: list[str] = [
         "http://localhost:5173",

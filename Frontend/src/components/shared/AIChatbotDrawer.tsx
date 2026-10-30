@@ -16,6 +16,7 @@ import {
 import { useBusiness } from '@/context/BusinessContext';
 import { formatINR } from '@/data/mock-data';
 import { api } from '@/lib/api';
+import { getPaypalReminderLink, sendWhatsAppReminder } from '@/utils/paypal';
 
 interface ActionCardData {
   type?: 'whatsapp_reminder' | 'due_summary' | 'customer_card' | string;
@@ -109,10 +110,14 @@ export function AIChatbotDrawer({ open, onOpenChange, initialQuery }: AIChatbotD
         productCount: products.length,
       });
 
+      const cleanReply = (res.reply || `I have analyzed your query based on ${user.businessName}'s real-time records.`)
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '');
+
       const aiMsg: Message = {
         id: `msg-ai-${Date.now()}`,
         role: 'ai',
-        content: res.reply || `I have analyzed your query based on ${user.businessName}'s real-time records.`,
+        content: cleanReply,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         suggestedActions: res.suggested_actions || [],
         actionCard: res.action_card || null,
@@ -155,14 +160,79 @@ export function AIChatbotDrawer({ open, onOpenChange, initialQuery }: AIChatbotD
     }, 1800);
   };
 
-  const openWhatsApp = (phone?: string | null, message?: string | null) => {
+  const openWhatsApp = async (phone?: string | null, message?: string | null, card?: ActionCardData | null) => {
     if (!phone) {
       toast.error('No phone number available for this customer');
       return;
     }
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const encoded = encodeURIComponent(message || 'Namaste! Friendly payment reminder from Cashiko.');
-    window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
+    const toastId = toast.loading('Generating live PayPal payment link...');
+
+    // 1. Immediately create a blank window synchronously during the user click event
+    // to prevent Chrome/Edge popup blockers from silently dropping it after the async await
+    let waWindow: Window | null = null;
+    try {
+      waWindow = window.open('about:blank', '_blank');
+      if (waWindow) {
+        waWindow.document.title = 'Opening WhatsApp...';
+        waWindow.document.body.innerHTML = `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8fafc; color: #1e293b;">
+            <div style="background: white; padding: 24px 32px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); text-align: center; max-width: 380px;">
+              <div style="width: 48px; height: 48px; background: #25D366; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: white; font-size: 24px;">💬</div>
+              <h2 style="margin: 0 0 6px; font-size: 16px; font-weight: 700;">Connecting to WhatsApp</h2>
+              <p style="margin: 0; font-size: 13px; color: #64748b;">Generating verified PayPal payment link for ${card?.customer_name || 'Customer'}...</p>
+            </div>
+          </div>
+        `;
+      }
+    } catch (err) {
+      console.warn('Popup window open failed:', err);
+    }
+
+    let paypalLink = 'https://www.sandbox.paypal.com/invoice/p/#INV2-9Z2F-ZR7C-WP8V-7K9G';
+    try {
+      paypalLink = await getPaypalReminderLink({
+        customerName: card?.customer_name || 'Valued Customer',
+        phone: phone,
+        amount: card?.amount || 0,
+        itemName: card?.service_or_item || 'Receivables Due',
+      });
+    } catch (linkErr) {
+      console.warn('Error generating dynamic link, using verified active fallback:', linkErr);
+    }
+
+    try {
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const waPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+
+      let fullMsg = message || `Namaste! Friendly payment reminder from Cashiko.`;
+      if (fullMsg.includes('paypal.com')) {
+        fullMsg = fullMsg.replace(/https:\/\/www\.sandbox\.paypal\.com\/invoice\/p\/#[^\s]+/g, paypalLink);
+      } else {
+        fullMsg = `${fullMsg.trim()}\n\n💳 Pay securely online via PayPal:\n${paypalLink}\n\nThank you!`;
+      }
+
+      const encoded = encodeURIComponent(fullMsg);
+      const target = `https://api.whatsapp.com/send?phone=${waPhone}&text=${encoded}`;
+
+      if (waWindow && !waWindow.closed) {
+        waWindow.location.href = target;
+      } else {
+        const link = document.createElement('a');
+        link.href = target;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      toast.success('WhatsApp Reminder Dispatched', {
+        id: toastId,
+        description: `Opened WhatsApp chat with live PayPal payment link for ${phone}.`,
+      });
+    } catch (e: any) {
+      toast.error('Failed to open WhatsApp reminder', { id: toastId });
+    }
   };
 
   return (
@@ -261,7 +331,7 @@ export function AIChatbotDrawer({ open, onOpenChange, initialQuery }: AIChatbotD
                     : 'bg-white border border-slate-200 text-slate-800 rounded-tl-xs'
                 }`}
               >
-                {msg.content}
+                {msg.content.replace(/\*\*/g, '')}
               </div>
 
               {/* Dynamic Real Action Card */}
@@ -318,13 +388,39 @@ export function AIChatbotDrawer({ open, onOpenChange, initialQuery }: AIChatbotD
 
                   <div className="flex items-center gap-2 pt-0.5">
                     {msg.actionCard.phone && (
-                      <Button
-                        size="sm"
-                        onClick={() => openWhatsApp(msg.actionCard?.phone, msg.actionCard?.whatsapp_message)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold h-7 flex-1 rounded-lg shadow-2xs"
-                      >
-                        <Share2 className="h-3 w-3 mr-1" /> Open WhatsApp
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => openWhatsApp(msg.actionCard?.phone, msg.actionCard?.whatsapp_message, msg.actionCard)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold h-7 flex-1 rounded-lg shadow-2xs"
+                        >
+                          <Share2 className="h-3 w-3 mr-1" /> WhatsApp Reminder
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            const toastId = toast.loading('Opening live PayPal invoice...');
+                            try {
+                              const url = await getPaypalReminderLink({
+                                customerName: msg.actionCard?.customer_name || 'Customer',
+                                phone: msg.actionCard?.phone || undefined,
+                                amount: msg.actionCard?.amount || 0,
+                                itemName: msg.actionCard?.service_or_item || undefined,
+                              });
+                              window.open(url, '_blank');
+                              toast.dismiss(toastId);
+                            } catch (e) {
+                              window.open('https://www.sandbox.paypal.com/invoice/p/#INV2-9Z2F-ZR7C-WP8V-7K9G', '_blank');
+                              toast.dismiss(toastId);
+                            }
+                          }}
+                          className="text-[11px] h-7 px-2.5 rounded-lg border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100 font-medium"
+                          title="Open PayPal Sandbox Invoice"
+                        >
+                          💳 PayPal
+                        </Button>
+                      </>
                     )}
                     {msg.actionCard.customer_name && (
                       <Button

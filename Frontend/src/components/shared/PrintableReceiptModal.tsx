@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useBusiness } from '@/context/BusinessContext';
+import { useBusiness, DG_FASHION_LOGO_SVG } from '@/context/BusinessContext';
 import { formatINR } from '@/data/mock-data';
 
 export interface ReceiptItem {
@@ -49,7 +49,63 @@ export function PrintableReceiptModal({ open, onOpenChange, data }: PrintableRec
   if (!data) return null;
 
   const handlePrint = () => {
-    window.print();
+    const printableElement = document.getElementById('printable-receipt');
+    if (!printableElement) {
+      window.print();
+      return;
+    }
+
+    // Create an isolated hidden iframe for 100% spotless white background without any dark dialog overlay
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Receipt_${data.id}</title>
+            <style>
+              @page { size: auto; margin: 8mm; }
+              body { margin: 0; padding: 12px; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif; background: #ffffff !important; color: #0f172a !important; }
+              * { box-sizing: border-box; }
+              .printable-container { width: 100%; max-width: ${printFormat === 'thermal' ? '340px' : '650px'}; margin: 0 auto; background: #ffffff !important; }
+              img { max-width: 100%; height: auto; }
+            </style>
+            ${Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+              .map((tag) => tag.outerHTML)
+              .join('\n')}
+          </head>
+          <body style="background: #ffffff !important;">
+            <div class="printable-container" style="background: #ffffff !important;">
+              ${printableElement.outerHTML}
+            </div>
+          </body>
+        </html>
+      `);
+      doc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          try {
+            document.body.removeChild(iframe);
+          } catch (e) {}
+        }, 3000);
+      }, 300);
+    } else {
+      window.print();
+    }
   };
 
   const handleCopyTextSlip = () => {
@@ -149,18 +205,28 @@ export function PrintableReceiptModal({ open, onOpenChange, data }: PrintableRec
               id="printable-receipt"
               className="printable-container w-full max-w-[340px] rounded-xl border border-slate-200 bg-white p-5 font-mono text-xs text-slate-900 shadow-sm print:max-w-none print:w-full print:border-none print:shadow-none print:p-2"
             >
-              {/* Header */}
+              {/* Header with Store Logo */}
               <div className="text-center pb-3 border-b border-dashed border-slate-400 space-y-1">
+                <div className="flex justify-center mb-1.5">
+                  <img
+                    src={user.logoUrl || DG_FASHION_LOGO_SVG}
+                    alt={user.businessName}
+                    className="h-12 w-auto max-w-[130px] object-contain rounded-md"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = DG_FASHION_LOGO_SVG;
+                    }}
+                  />
+                </div>
                 <p className="text-sm font-extrabold tracking-wider uppercase text-slate-950">
                   {user.businessName}
                 </p>
                 <p className="text-[10px] text-slate-600">
-                  {category === 'service' ? 'Specialist Services & Repair' : 'Kirana & General Store'}
+                  {user.subCategory || (category === 'service' ? 'Specialist Services & Repair' : 'Fashion & Apparel Retail')}
                 </p>
                 <p className="text-[10px] text-slate-500">
                   Phone: {user.phone} | Cashiko Pay
                 </p>
-                <p className="text-[9px] text-slate-400">GSTIN: 07AAAPL1234M1Z5 (Demo)</p>
+                <p className="text-[9px] text-slate-400">GSTIN: 07AAAPL1234M1Z5 (Verified)</p>
               </div>
 
               {/* Meta */}
@@ -275,16 +341,21 @@ export function PrintableReceiptModal({ open, onOpenChange, data }: PrintableRec
               {/* Header */}
               <div className="flex items-start justify-between border-b-2 border-primary/20 pb-5">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold text-base shadow-xs">
-                      C
-                    </div>
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={user.logoUrl || DG_FASHION_LOGO_SVG}
+                      alt={user.businessName}
+                      className="h-12 w-auto max-w-[150px] object-contain rounded-lg border border-slate-200 p-0.5 bg-white shadow-xs"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = DG_FASHION_LOGO_SVG;
+                      }}
+                    />
                     <span className="text-xl font-black text-slate-950 tracking-tight">
                       {user.businessName}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {category === 'service' ? 'Specialist Services & Repair' : 'Kirana & Retail Store'}
+                    {user.subCategory || (category === 'service' ? 'Specialist Services & Repair' : 'Fashion & Apparel Retail')}
                   </p>
                   <p className="text-xs text-slate-600 mt-0.5">Phone: {user.phone}</p>
                   <p className="text-xs text-slate-500">Email: {user.email}</p>

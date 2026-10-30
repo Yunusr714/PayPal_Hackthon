@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
+  Mail,
   FileText,
   Search,
   Filter,
@@ -50,6 +51,22 @@ export function InvoicesPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [activeModalInvoice, setActiveModalInvoice] = useState<Invoice | null>(null);
+  const [isSendingEmailId, setIsSendingEmailId] = useState<string | null>(null);
+
+  const handleSendEmail = async (inv: Invoice) => {
+    setIsSendingEmailId(inv.id);
+    try {
+      await api.invoices.sendEmail(inv.id, inv.recipient_email);
+      toast.success('Email Delivered to Client!', {
+        description: `Official branded invoice & PayPal checkout link dispatched to ${inv.recipient_email}`,
+      });
+      await fetchInvoices();
+    } catch (err: any) {
+      toast.error('Email dispatch failed', { description: err.message });
+    } finally {
+      setIsSendingEmailId(null);
+    }
+  };
 
   const filteredInvoices = invoices.filter((inv) => {
     const matchesSearch =
@@ -425,6 +442,22 @@ export function InvoicesPage() {
                             title="Reconcile status with PayPal Invoicing API"
                           >
                             <RefreshCw className={`h-3.5 w-3.5 ${actionLoadingId === `refresh-${inv.id}` ? 'animate-spin' : ''}`} />
+                          </Button>
+
+                          {/* Send Email */}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleSendEmail(inv)}
+                            disabled={isSendingEmailId === inv.id}
+                            className="h-8 w-8 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 dark:hover:bg-zinc-800"
+                            title={`Send branded invoice email to ${inv.recipient_email}`}
+                          >
+                            {isSendingEmailId === inv.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Mail className="h-3.5 w-3.5" />
+                            )}
                           </Button>
 
                           {/* Copy Link */}

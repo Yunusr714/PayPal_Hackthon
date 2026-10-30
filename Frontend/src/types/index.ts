@@ -96,10 +96,22 @@ export interface TriageClassifyResponse {
 export interface TriageDraftResult {
   subject: string;
   draft_reply: string;
-  tone: string;
-  rationale: string;
-  payment_link_included: boolean;
-  balance_due: number;
+  draft_message?: string;
+  tone?: string;
+  rationale?: string;
+  payment_link_included?: boolean;
+  payment_link?: string;
+  balance_due?: number;
+  total_invoice_amount?: number;
+  currency?: string;
+  recipient_name?: string;
+  recipient_email?: string;
+  fact_citations?: string[];
+  is_partial_payment?: boolean;
+  partial_amount?: number;
+  remaining_balance?: number;
+  next_due_date?: string;
+  merchant_name?: string;
 }
 
 export interface AuditEvent {

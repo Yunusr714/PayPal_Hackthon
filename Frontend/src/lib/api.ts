@@ -72,9 +72,10 @@ export const api = {
       });
     },
 
-    createPayPalDraft: async (id: string): Promise<Invoice> => {
+    createPayPalDraft: async (id: string, merchant?: { business_name?: string; name?: string; logo_url?: string }): Promise<Invoice> => {
       return request<Invoice>(`/invoices/${id}/create-paypal-draft`, {
         method: 'POST',
+        body: JSON.stringify(merchant || {}),
       });
     },
 
@@ -98,6 +99,49 @@ export const api = {
       return request<Invoice>(`/invoices/${id}/refresh`, {
         method: 'POST',
       });
+    },
+
+    sendEmail: async (
+      id: string,
+      recipient_email?: string,
+      note?: string,
+      extra?: {
+        subject?: string;
+        body_text?: string;
+        business_name?: string;
+        logo_url?: string;
+        is_partial_payment?: boolean;
+        partial_amount?: number;
+        remaining_balance?: number;
+        next_due_date?: string;
+      }
+    ): Promise<{ status: string; message: string; invoice_id: string; recipient_email: string }> => {
+      return request<{ status: string; message: string; invoice_id: string; recipient_email: string }>(
+        `/invoices/${id}/send-email`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ recipient_email, note, ...(extra || {}) }),
+        }
+      );
+    },
+
+    generatePaymentLink: async (data: {
+      customer_name: string;
+      customer_phone?: string;
+      customer_email?: string;
+      amount_inr: number;
+      item_name?: string;
+      notes?: string;
+      business_name?: string;
+      logo_url?: string;
+    }): Promise<{ invoice_id: string; payment_url: string; amount_usd: number; amount_inr: number; currency: string }> => {
+      return request<{ invoice_id: string; payment_url: string; amount_usd: number; amount_inr: number; currency: string }>(
+        '/invoices/generate-payment-link',
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }
+      );
     },
   },
 
@@ -248,5 +292,36 @@ export const api = {
     getConnectionStatus: async (): Promise<ConnectionStatus> => {
       return request<ConnectionStatus>('/settings/connection');
     },
+    getMerchantProfile: async (identifier?: string): Promise<any> => {
+      const q = identifier ? `?identifier=${encodeURIComponent(identifier)}` : '';
+      return request<any>(`/settings/merchant${q}`);
+    },
+    listMerchants: async (): Promise<any[]> => {
+      return request<any[]>('/settings/merchants');
+    },
+    loginMerchant: async (identifier: string, password?: string): Promise<any> => {
+      return request<any>('/settings/merchant/login', {
+        method: 'POST',
+        body: JSON.stringify({ identifier, password }),
+      });
+    },
+    updateMerchantProfile: async (data: {
+      id?: string;
+      business_name: string;
+      owner_name: string;
+      phone: string;
+      email?: string;
+      category?: string;
+      sub_category?: string;
+      password?: string;
+      logo_url?: string;
+      address?: string;
+    }): Promise<any> => {
+      return request<any>('/settings/merchant', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
   },
 };
+

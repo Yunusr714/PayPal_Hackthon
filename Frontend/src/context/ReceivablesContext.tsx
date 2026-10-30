@@ -144,6 +144,7 @@ export function ReceivablesProvider({ children }: { children: React.ReactNode })
       let finalInv = newInv;
       if (autoPushDraft) {
         try {
+          // No localStorage or hardcoded fallbacks — backend reads MerchantProfile from DB
           finalInv = await api.invoices.createPayPalDraft(newInv.id);
           toast.success('PayPal Sandbox Draft Created', {
             description: `Draft ID: ${finalInv.paypal_invoice_id || finalInv.id.substring(0, 8)}`,
@@ -166,6 +167,7 @@ export function ReceivablesProvider({ children }: { children: React.ReactNode })
 
   const createPayPalDraft = async (id: string): Promise<Invoice> => {
     try {
+      // No localStorage or hardcoded fallbacks — backend reads MerchantProfile from DB
       const updated = await api.invoices.createPayPalDraft(id);
       toast.success('Pushed draft to PayPal Sandbox', {
         description: `PayPal Invoice ID: ${updated.paypal_invoice_id}`,

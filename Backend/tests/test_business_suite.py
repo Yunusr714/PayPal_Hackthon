@@ -14,11 +14,10 @@ async def test_customers_crud():
         assert res.status_code == 200
         customers = res.json()
         assert isinstance(customers, list)
-        assert len(customers) >= 1
 
         # Create new customer
         new_cust_payload = {
-            "name": "Karan Malhotra",
+            "name": "Karan Test Malhotra",
             "phone": "+91 99887 76655",
             "email": "karan.malhotra@test.com",
             "category": "service",
@@ -31,8 +30,11 @@ async def test_customers_crud():
         res_create = await client.post("/api/v1/customers", json=new_cust_payload)
         assert res_create.status_code == 201
         created = res_create.json()
-        assert created["name"] == "Karan Malhotra"
+        assert created["name"] == "Karan Test Malhotra"
         assert created["outstanding"] == 500.0
+
+        # Clean up test customer
+        await client.delete(f"/api/v1/customers/{created['id']}")
 
 
 @pytest.mark.asyncio
@@ -45,17 +47,17 @@ async def test_catalog_and_sales():
         assert res_cat.status_code == 200
         items = res_cat.json()
         assert isinstance(items, list)
-        assert len(items) >= 1
+        assert len(items) >= 10
 
         # Create new sale
         sale_payload = {
-            "customer_name": "Sharma Uncle",
+            "customer_name": "Test Client",
             "customer_phone": "+91 98100 12345",
             "category_type": "shop",
-            "item_name": "Fortune Sunflower Oil (2L)",
-            "quantity": 2.0,
-            "unit_price": 280.0,
-            "total_amount": 560.0,
+            "item_name": "Classic Denim Jacket",
+            "quantity": 1.0,
+            "unit_price": 2799.0,
+            "total_amount": 2799.0,
             "payment_mode": "CREDIT",
             "status": "PENDING",
             "date": "17 Oct 2026",
@@ -65,8 +67,18 @@ async def test_catalog_and_sales():
         res_sale = await client.post("/api/v1/sales", json=sale_payload)
         assert res_sale.status_code == 201
         sale = res_sale.json()
-        assert sale["total_amount"] == 560.0
+        assert sale["total_amount"] == 2799.0
         assert sale["payment_mode"] == "CREDIT"
+
+        # Clean up test sale and auto-created customer
+        from app.db.session import AsyncSessionLocal
+        from app.db.models.sale import SaleRecord
+        from app.db.models.customer import Customer
+        from sqlalchemy import delete
+        async with AsyncSessionLocal() as session:
+            await session.execute(delete(SaleRecord).where(SaleRecord.customer_name == "Test Client"))
+            await session.execute(delete(Customer).where(Customer.name == "Test Client"))
+            await session.commit()
 
 
 @pytest.mark.asyncio

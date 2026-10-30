@@ -13,6 +13,7 @@ import { KPICard } from '@/components/shared/KPICard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useBusiness } from '@/context/BusinessContext';
 import { formatINR } from '@/data/mock-data';
+import { sendWhatsAppReminder } from '@/utils/paypal';
 
 export function KhataPage() {
   const navigate = useNavigate();
@@ -102,20 +103,28 @@ export function KhataPage() {
               </div>
               <Button
                 size="sm"
-                onClick={() => {
+                onClick={async () => {
                   const overdueCustomers = customerKhataList.filter((k) => k.outstanding > 0);
                   if (overdueCustomers.length === 0) {
                     toast.info('All dues are cleared! No outstanding balances.');
                     return;
                   }
                   const top = overdueCustomers[0];
-                  const cleanPhone = (top.phone || '').replace(/[^0-9]/g, '');
-                  const waPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
-                  const msg = `Namaste ${top.customer} ji! Polite reminder from Cashiko: you have an outstanding balance of ₹${top.outstanding.toLocaleString('en-IN')}. Please settle at your earliest convenience. Thank you!`;
-                  window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-                  toast.success('Dispatched WhatsApp Reminder', {
-                    description: `Opened chat for highest pending due: ${top.customer} (₹${top.outstanding.toLocaleString('en-IN')}).`,
-                  });
+                  const toastId = toast.loading('Generating live PayPal payment link...');
+                  try {
+                    await sendWhatsAppReminder({
+                      customerName: top.customer,
+                      phone: top.phone,
+                      amount: top.outstanding,
+                      businessName: 'Cashiko',
+                    });
+                    toast.success('Dispatched WhatsApp Reminder with Live PayPal Link', {
+                      id: toastId,
+                      description: `Opened chat for ${top.customer} with verified PayPal payment link.`,
+                    });
+                  } catch (e: any) {
+                    toast.error('Failed to dispatch reminder', { id: toastId });
+                  }
                 }}
                 className={isService
                   ? 'bg-[#007F7C] hover:bg-[#006663] text-white font-semibold text-xs'
@@ -186,12 +195,22 @@ export function KhataPage() {
                             <DropdownMenuItem onClick={() => navigate(`/customers/${encodeURIComponent(entry.customer)}`)}>
                               <Eye className="h-3.5 w-3.5 mr-2" /> View Ledger
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              const cleanPhone = (entry.phone || '').replace(/[^0-9]/g, '');
-                              const waPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
-                              const msg = `Namaste ${entry.customer} ji! Polite reminder from Cashiko: you have an outstanding khata balance of ₹${entry.outstanding.toLocaleString('en-IN')}. Please settle at your convenience. Thank you!`;
-                              window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-                              toast.success('WhatsApp Reminder Dispatched', { description: `Opened chat for ${entry.customer}.` });
+                            <DropdownMenuItem onClick={async () => {
+                              const toastId = toast.loading('Generating live PayPal payment link...');
+                              try {
+                                await sendWhatsAppReminder({
+                                  customerName: entry.customer,
+                                  phone: entry.phone,
+                                  amount: entry.outstanding,
+                                  businessName: 'Cashiko',
+                                });
+                                toast.success('WhatsApp Reminder Dispatched', {
+                                  id: toastId,
+                                  description: `Opened chat for ${entry.customer} with verified PayPal payment link.`,
+                                });
+                              } catch (e: any) {
+                                toast.error('Failed to open WhatsApp reminder', { id: toastId });
+                              }
                             }}>
                               <Bell className="h-3.5 w-3.5 mr-2 text-emerald-600" /> WhatsApp Reminder
                             </DropdownMenuItem>

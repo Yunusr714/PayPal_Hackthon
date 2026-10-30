@@ -35,11 +35,11 @@ export const monthlySalesData = [
 ];
 
 export const topProductsData = [
-  { product: 'Milk', units: 320 },
-  { product: 'Bread', units: 280 },
-  { product: 'Aata', units: 210 },
-  { product: 'Rice', units: 180 },
-  { product: 'Biscuits', units: 160 },
+  { product: 'Cotton Oxford Shirt', units: 140 },
+  { product: 'Classic Denim Jacket', units: 95 },
+  { product: 'Casual Stretch Chinos', units: 85 },
+  { product: 'Streetwear Hoodie', units: 75 },
+  { product: 'Festive Kurti', units: 60 },
 ];
 
 export const creditRiskData = [
@@ -85,25 +85,9 @@ export interface Sale {
   dueDate?: string;
 }
 
-export const recentSales: Sale[] = [
-  { id: 'INV-1042', customer: 'Sharma Uncle', items: 'Rice, Oil, Biscuits', amount: 340, mode: 'Credit', status: 'Pending', date: '13 Oct 2026', dueDate: '18 Oct 2026' },
-  { id: 'INV-1041', customer: 'Priya Verma', items: 'Milk, Bread, Eggs', amount: 180, mode: 'UPI', status: 'Paid', date: '13 Oct 2026' },
-  { id: 'INV-1040', customer: 'Rahul Gupta', items: 'Atta, Sugar', amount: 620, mode: 'Cash', status: 'Paid', date: '13 Oct 2026' },
-  { id: 'INV-1039', customer: 'Anil Kumar', items: 'Cooking Oil', amount: 450, mode: 'Credit', status: 'Overdue', date: '12 Oct 2026', dueDate: '07 Oct 2026' },
-  { id: 'INV-1038', customer: 'Neha Singh', items: 'Snacks, Cold Drinks', amount: 310, mode: 'UPI', status: 'Paid', date: '12 Oct 2026' },
-  { id: 'INV-1037', customer: 'Mohit Jain', items: 'Rice, Dal', amount: 890, mode: 'PayPal', status: 'Paid', date: '11 Oct 2026' },
-  { id: 'INV-1036', customer: 'Sunita Devi', items: 'Vegetables', amount: 260, mode: 'Cash', status: 'Paid', date: '11 Oct 2026' },
-  { id: 'INV-1035', customer: 'Vikas Mehta', items: 'Detergent, Soap', amount: 540, mode: 'Credit', status: 'Pending', date: '10 Oct 2026', dueDate: '16 Oct 2026' },
-];
+export const recentSales: Sale[] = [];
 
-export const allSales: Sale[] = [
-  ...recentSales,
-  { id: 'INV-1034', customer: 'Rajesh Khanna', items: 'Tea, Sugar, Biscuits', amount: 220, mode: 'Cash', status: 'Paid', date: '10 Oct 2026' },
-  { id: 'INV-1033', customer: 'Kavita Sharma', items: 'Cooking Oil, Rice', amount: 780, mode: 'UPI', status: 'Paid', date: '09 Oct 2026' },
-  { id: 'INV-1032', customer: 'Deepak Verma', items: 'Dal, Atta, Salt', amount: 410, mode: 'Credit', status: 'Pending', date: '09 Oct 2026', dueDate: '16 Oct 2026' },
-  { id: 'INV-1031', customer: 'Sunita Devi', items: 'Vegetables, Fruits', amount: 350, mode: 'Cash', status: 'Paid', date: '08 Oct 2026' },
-  { id: 'INV-1030', customer: 'Arjun Reddy', items: 'Cold Drinks, Snacks', amount: 290, mode: 'UPI', status: 'Paid', date: '08 Oct 2026' },
-];
+export const allSales: Sale[] = [];
 
 export interface KhataEntry {
   customer: string;
@@ -116,14 +100,7 @@ export interface KhataEntry {
   risk: 'Low' | 'Medium' | 'High';
 }
 
-export const khataData: KhataEntry[] = [
-  { customer: 'Sharma Uncle', phone: '+91 98100 12345', totalCredit: 3400, paid: 3060, outstanding: 340, lastPayment: '01 Oct 2026', dueDate: '18 Oct 2026', risk: 'Medium' },
-  { customer: 'Anil Kumar', phone: '+91 98100 23456', totalCredit: 4200, paid: 2950, outstanding: 1250, lastPayment: '28 Sep 2026', dueDate: '07 Oct 2026', risk: 'High' },
-  { customer: 'Vikas Mehta', phone: '+91 98100 34567', totalCredit: 1800, paid: 1260, outstanding: 540, lastPayment: '05 Oct 2026', dueDate: '16 Oct 2026', risk: 'Low' },
-  { customer: 'Sunita Devi', phone: '+91 98100 45678', totalCredit: 2200, paid: 2200, outstanding: 0, lastPayment: '10 Oct 2026', dueDate: 'No dues', risk: 'Low' },
-  { customer: 'Rakesh Yadav', phone: '+91 98100 56789', totalCredit: 5600, paid: 3500, outstanding: 2100, lastPayment: '20 Sep 2026', dueDate: '01 Oct 2026', risk: 'High' },
-  { customer: 'Priya Verma', phone: '+91 98100 67890', totalCredit: 980, paid: 800, outstanding: 180, lastPayment: '08 Oct 2026', dueDate: '14 Oct 2026', risk: 'Low' },
-];
+export const khataData: KhataEntry[] = [];
 
 export interface Customer {
   id?: string;
@@ -138,18 +115,7 @@ export interface Customer {
   lastVisit: string;
 }
 
-export const customersData: Customer[] = [
-  { name: 'Sharma Uncle', phone: '+91 98100 12345', totalPurchases: 12400, outstanding: 340, behaviour: 'Good', riskScore: 42, lastVisit: '13 Oct 2026' },
-  { name: 'Anil Kumar', phone: '+91 98100 23456', totalPurchases: 8200, outstanding: 1250, behaviour: 'Poor', riskScore: 78, lastVisit: '12 Oct 2026' },
-  { name: 'Vikas Mehta', phone: '+91 98100 34567', totalPurchases: 6800, outstanding: 540, behaviour: 'Good', riskScore: 25, lastVisit: '10 Oct 2026' },
-  { name: 'Sunita Devi', phone: '+91 98100 45678', totalPurchases: 15200, outstanding: 0, behaviour: 'Excellent', riskScore: 8, lastVisit: '11 Oct 2026' },
-  { name: 'Rakesh Yadav', phone: '+91 98100 56789', totalPurchases: 9600, outstanding: 2100, behaviour: 'Poor', riskScore: 85, lastVisit: '28 Sep 2026' },
-  { name: 'Priya Verma', phone: '+91 98100 67890', totalPurchases: 4800, outstanding: 180, behaviour: 'Excellent', riskScore: 15, lastVisit: '13 Oct 2026' },
-  { name: 'Rahul Gupta', phone: '+91 98100 78901', totalPurchases: 11200, outstanding: 0, behaviour: 'Good', riskScore: 30, lastVisit: '13 Oct 2026' },
-  { name: 'Neha Singh', phone: '+91 98100 89012', totalPurchases: 5400, outstanding: 0, behaviour: 'Excellent', riskScore: 12, lastVisit: '12 Oct 2026' },
-  { name: 'Mohit Jain', phone: '+91 98100 90123', totalPurchases: 8900, outstanding: 0, behaviour: 'Good', riskScore: 35, lastVisit: '11 Oct 2026' },
-  { name: 'Kavita Sharma', phone: '+91 98100 11223', totalPurchases: 7300, outstanding: 0, behaviour: 'Good', riskScore: 28, lastVisit: '09 Oct 2026' },
-];
+export const customersData: Customer[] = [];
 
 export interface Product {
   name: string;
@@ -162,26 +128,9 @@ export interface Product {
   status: 'In Stock' | 'Low Stock' | 'Critical';
 }
 
-export const productsData: Product[] = [
-  { name: 'Aata / Wheat Flour', category: 'Grains', stock: 4, unit: 'kg', reorderLevel: 10, costPrice: 35, sellingPrice: 42, status: 'Low Stock' },
-  { name: 'Basmati Rice', category: 'Grains', stock: 6, unit: 'kg', reorderLevel: 15, costPrice: 85, sellingPrice: 95, status: 'Low Stock' },
-  { name: 'Sunflower Oil', category: 'Oil', stock: 2, unit: 'litres', reorderLevel: 8, costPrice: 120, sellingPrice: 140, status: 'Critical' },
-  { name: 'Sugar', category: 'Grains', stock: 3, unit: 'kg', reorderLevel: 10, costPrice: 42, sellingPrice: 48, status: 'Low Stock' },
-  { name: 'Milk Packet', category: 'Dairy', stock: 25, unit: 'units', reorderLevel: 10, costPrice: 24, sellingPrice: 28, status: 'In Stock' },
-  { name: 'Bread', category: 'Bakery', stock: 12, unit: 'units', reorderLevel: 6, costPrice: 28, sellingPrice: 35, status: 'In Stock' },
-  { name: 'Detergent Powder', category: 'Household', stock: 5, unit: 'packets', reorderLevel: 12, costPrice: 65, sellingPrice: 80, status: 'Low Stock' },
-  { name: 'Biscuits', category: 'Snacks', stock: 48, unit: 'packets', reorderLevel: 20, costPrice: 10, sellingPrice: 15, status: 'In Stock' },
-  { name: 'Dal', category: 'Grains', stock: 18, unit: 'kg', reorderLevel: 8, costPrice: 95, sellingPrice: 110, status: 'In Stock' },
-  { name: 'Cold Drinks', category: 'Beverages', stock: 3, unit: 'bottles', reorderLevel: 12, costPrice: 25, sellingPrice: 35, status: 'Critical' },
-];
+export const productsData: Product[] = [];
 
-export const lowStockAlerts = [
-  { name: 'Aata / Wheat Flour', stock: 4, unit: 'kg', reorder: 10 },
-  { name: 'Sunflower Oil', stock: 2, unit: 'litres', reorder: 8 },
-  { name: 'Basmati Rice', stock: 6, unit: 'kg', reorder: 15 },
-  { name: 'Sugar', stock: 3, unit: 'kg', reorder: 10 },
-  { name: 'Detergent Powder', stock: 5, unit: 'packets', reorder: 12 },
-];
+export const lowStockAlerts: { name: string; stock: number; unit: string; reorder: number }[] = [];
 
 export interface Supplier {
   name: string;

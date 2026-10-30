@@ -23,6 +23,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PrintableReceiptModal, ReceiptData } from '@/components/shared/PrintableReceiptModal';
 import { useBusiness } from '@/context/BusinessContext';
 import { formatINR, PaymentMode, Sale } from '@/data/mock-data';
+import { sendWhatsAppReminder } from '@/utils/paypal';
 
 export function SalesPage() {
   const { sales, addSale, products, services, category, user } = useBusiness();
@@ -38,9 +39,9 @@ export function SalesPage() {
   const [isNewSaleOpen, setIsNewSaleOpen] = useState(false);
 
   // Shop Mode State (Product selection & stock deduction)
-  const [selectedProductName, setSelectedProductName] = useState(products[0]?.name || 'Basmati Rice');
+  const [selectedProductName, setSelectedProductName] = useState(products[0]?.name || 'Slim Fit Cotton Oxford Shirt');
   const [quantity, setQuantity] = useState('1');
-  const [unitPrice, setUnitPrice] = useState(products[0]?.sellingPrice?.toString() || '95');
+  const [unitPrice, setUnitPrice] = useState(products[0]?.sellingPrice?.toString() || '1499');
 
   // Service Mode State (Rate card selection & labor billing — Zero inventory!)
   const [selectedServiceId, setSelectedServiceId] = useState(services[0]?.id || '');
@@ -94,8 +95,8 @@ export function SalesPage() {
       setServiceNotes('');
       setPaymentMode('Cash');
     } else {
-      const defaultProd = products[0]?.name || 'Basmati Rice';
-      const defaultPrice = products[0]?.sellingPrice?.toString() || '95';
+      const defaultProd = products[0]?.name || 'Slim Fit Cotton Oxford Shirt';
+      const defaultPrice = products[0]?.sellingPrice?.toString() || '1499';
       setSelectedProductName(defaultProd);
       setUnitPrice(defaultPrice);
       setQuantity('1');
@@ -825,9 +826,22 @@ export function SalesPage() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      const msg = `Namaste ${selectedReceipt.customer}! Here is your Cashiko receipt for ${selectedReceipt.id}: ${selectedReceipt.items}. Total amount: ₹${selectedReceipt.amount.toLocaleString('en-IN')}. Mode: ${selectedReceipt.mode} (${selectedReceipt.status}). Thank you for your business!`;
-                      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                    onClick={async () => {
+                      const toastId = toast.loading('Generating live PayPal payment link...');
+                      try {
+                        await sendWhatsAppReminder({
+                          customerName: selectedReceipt.customer,
+                          amount: selectedReceipt.amount,
+                          itemName: selectedReceipt.items,
+                          businessName: user?.businessName || 'Cashiko',
+                        });
+                        toast.success('WhatsApp Receipt Dispatched!', {
+                          id: toastId,
+                          description: `Opened WhatsApp with live PayPal payment link.`,
+                        });
+                      } catch (e: any) {
+                        toast.error('Failed to open WhatsApp', { id: toastId });
+                      }
                     }}
                     className="text-xs border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                   >

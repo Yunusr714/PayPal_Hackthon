@@ -16,6 +16,7 @@ import { AddJobDialog } from '@/components/shared/AddJobDialog';
 import { PrintableReceiptModal, ReceiptData } from '@/components/shared/PrintableReceiptModal';
 import { useBusiness, ServiceItem, ServiceJob } from '@/context/BusinessContext';
 import { formatINR } from '@/data/mock-data';
+import { sendWhatsAppReminder } from '@/utils/paypal';
 
 export function ServicesPage() {
   const { services, serviceJobs, updateService, deleteService, updateJobStatus, category, user } = useBusiness();
@@ -370,14 +371,24 @@ export function ServicesPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
-                              const cleanPhone = (job.phone || '').replace(/[^0-9]/g, '');
-                              const waPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
-                              const msg = `Namaste ${job.customerName}! Here is your Cashiko service job slip for ${job.serviceName}. Amount: ₹${job.amount.toLocaleString('en-IN')}. Status: ${job.status}. Due Date: ${job.dueDate}. Thank you!`;
-                              window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-                              toast.success('WhatsApp Receipt Dispatched!', {
-                                description: `Opened WhatsApp for ${job.customerName} (${job.phone}).`,
-                              });
+                            onClick={async () => {
+                              const toastId = toast.loading('Generating live PayPal payment link...');
+                              try {
+                                await sendWhatsAppReminder({
+                                  customerName: job.customerName,
+                                  phone: job.phone,
+                                  amount: job.amount,
+                                  itemName: job.serviceName,
+                                  dueDate: job.dueDate,
+                                  businessName: user?.businessName || 'Cashiko Services',
+                                });
+                                toast.success('WhatsApp Receipt Dispatched!', {
+                                  id: toastId,
+                                  description: `Opened WhatsApp for ${job.customerName} with verified PayPal payment link.`,
+                                });
+                              } catch (e: any) {
+                                toast.error('Failed to open WhatsApp reminder', { id: toastId });
+                              }
                             }}
                             className="h-7 text-[11px] px-2 text-emerald-700 hover:text-emerald-800"
                           >

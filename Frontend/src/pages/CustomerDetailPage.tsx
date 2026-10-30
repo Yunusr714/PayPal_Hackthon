@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { useBusiness, CustomerDueItem } from '@/context/BusinessContext';
 import { formatINR } from '@/data/mock-data';
+import { sendWhatsAppReminder } from '@/utils/paypal';
 
 function getInitials(name: string): string {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -94,8 +95,8 @@ export function CustomerDetailPage() {
 
   const handleOpenAddDue = () => {
     if (category === 'shop') {
-      const defaultProd = products[0]?.name || 'Aata / Wheat Flour';
-      const defaultPrice = products[0]?.sellingPrice?.toString() || '42';
+      const defaultProd = products[0]?.name || 'Slim Fit Cotton Oxford Shirt';
+      const defaultPrice = products[0]?.sellingPrice?.toString() || '1499';
       setSelectedServiceName(defaultProd);
       setUnitPrice(defaultPrice);
     } else {
@@ -248,15 +249,22 @@ export function CustomerDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                const cleanPhone = (customer.phone || '').replace(/[^0-9]/g, '');
-                const waPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
-                const bName = user?.businessName || 'Cashiko Store';
-                const msg = `Namaste ${customer.name} ji! Polite reminder from ${bName}: you have a pending khata balance of ₹${customer.outstanding.toLocaleString('en-IN')}. Please settle at your convenience. Thank you!`;
-                window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-                toast.success('WhatsApp Reminder Dispatched', {
-                  description: `Opened WhatsApp chat for ${customer.name} (${customer.phone}).`,
-                });
+              onClick={async () => {
+                const toastId = toast.loading('Generating live PayPal payment link...');
+                try {
+                  await sendWhatsAppReminder({
+                    customerName: customer.name,
+                    phone: customer.phone,
+                    amount: customer.outstanding,
+                    businessName: user?.businessName || 'Cashiko',
+                  });
+                  toast.success('WhatsApp Reminder Dispatched', {
+                    id: toastId,
+                    description: `Opened WhatsApp chat with live PayPal payment link for ${customer.name}.`,
+                  });
+                } catch (e: any) {
+                  toast.error('Failed to open WhatsApp reminder', { id: toastId });
+                }
               }}
               className={category === 'service'
                 ? 'border-[#007F7C]/30 text-[#007F7C] hover:bg-[#E6F5F5] text-xs font-semibold h-9 rounded-xl'
@@ -517,7 +525,7 @@ export function CustomerDetailPage() {
 
       {/* ADD NEW DUE POPUP MODAL */}
       <Dialog open={isAddDueOpen} onOpenChange={setIsAddDueOpen}>
-        <DialogContent className="max-w-md rounded-2xl border-border bg-white p-6 shadow-2xl">
+        <DialogContent className="sm:max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#141518] text-foreground p-6 shadow-2xl">
           <DialogHeader className="pb-1">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
@@ -558,7 +566,7 @@ export function CustomerDetailPage() {
                           {prod.name} · {formatINR(prod.sellingPrice)}/{prod.unit} (Stock: {prod.stock} {prod.unit})
                         </SelectItem>
                       ))}
-                      <SelectItem value="Custom Grocery Goods">Custom Grocery / Merchandise</SelectItem>
+                      <SelectItem value="Custom Fashion Apparel">Custom Apparel / Fashion Goods</SelectItem>
                     </>
                   ) : (
                     <>
@@ -616,8 +624,8 @@ export function CustomerDetailPage() {
             {category === 'shop' && selectedProduct && (
               <div className={`rounded-xl border p-3 transition-colors ${
                 (parseFloat(quantity) || 0) > selectedProduct.stock
-                  ? 'border-rose-300 bg-rose-50 text-rose-900'
-                  : 'border-blue-200 bg-blue-50/70 text-slate-800'
+                  ? 'border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200'
+                  : 'border-blue-200 dark:border-blue-800/60 bg-blue-50/70 dark:bg-blue-950/30 text-slate-800 dark:text-blue-100'
               }`}>
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium">Original Stock:</span>
@@ -627,9 +635,9 @@ export function CustomerDetailPage() {
                   <span className="font-medium">Credit Qty to Deduct:</span>
                   <span className="font-bold text-destructive">-{parseFloat(quantity) || 0} {selectedProduct.unit}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs mt-1.5 pt-1.5 border-t border-slate-200 font-bold">
+                <div className="flex items-center justify-between text-xs mt-1.5 pt-1.5 border-t border-slate-200 dark:border-zinc-800 font-bold">
                   <span>Remaining Stock after Due:</span>
-                  <span className={(parseFloat(quantity) || 0) > selectedProduct.stock ? 'text-destructive font-black' : 'text-emerald-700 font-black'}>
+                  <span className={(parseFloat(quantity) || 0) > selectedProduct.stock ? 'text-destructive font-black' : 'text-emerald-700 dark:text-emerald-400 font-black'}>
                     {(parseFloat(quantity) || 0) > selectedProduct.stock
                       ? 'Insufficient Stock in Inventory!'
                       : `${Math.max(0, selectedProduct.stock - (parseFloat(quantity) || 0))} ${selectedProduct.unit}`}
@@ -639,12 +647,12 @@ export function CustomerDetailPage() {
             )}
 
             {/* Total Amount Auto-Calculation Banner */}
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 flex items-center justify-between">
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/70 dark:bg-emerald-950/30 p-3 flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-semibold text-emerald-800">Total Calculated Due</span>
+                <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">Total Calculated Due</span>
                 <p className="text-[10px] text-muted-foreground">Quantity × Unit Rate</p>
               </div>
-              <span className="text-lg font-black text-emerald-900">
+              <span className="text-lg font-black text-emerald-900 dark:text-emerald-200">
                 {formatINR((parseFloat(quantity) || 0) * (parseFloat(unitPrice) || 0))}
               </span>
             </div>
