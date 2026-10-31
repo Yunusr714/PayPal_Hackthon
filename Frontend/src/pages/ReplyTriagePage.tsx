@@ -138,10 +138,10 @@ export function ReplyTriagePage() {
 
       // Clean up any lingering placeholder brackets in drafted text
       let cleanDraft = (draft.draft_reply || draft.draft_message || '')
-        .replaceAll('[Merchant Name]', businessName)
-        .replaceAll('[Your Name]', businessName)
-        .replaceAll('[Store Name]', businessName)
-        .replaceAll('[Business Name]', businessName);
+        .replace(/\[Merchant Name\]/g, businessName)
+        .replace(/\[Your Name\]/g, businessName)
+        .replace(/\[Store Name\]/g, businessName)
+        .replace(/\[Business Name\]/g, businessName);
 
       setEditedDraft(cleanDraft);
       setEditedSubject(draft.subject || `Regarding Invoice ${selectedInvoice.paypal_invoice_number || selectedInvoice.id.substring(0, 8)}`);
