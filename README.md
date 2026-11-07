@@ -7,6 +7,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Render](https://img.shields.io/badge/Deploy-Render-46E3B7?logo=render&logoColor=black)](https://render.com/)
 
+🔗 **Live Application Demo:** [https://paypal-hackthon-frontend.onrender.com/](https://paypal-hackthon-frontend.onrender.com/)
+
 > **Cashiko** is an agentic receivables copilot that turns messy work notes into live PayPal invoices, triages customer excuses with zero-hallucination AI, and autonomously negotiates partial payment recovery on PayPal rails.
 
 ---
@@ -138,10 +140,11 @@ cd PayPal_Hackthon
 
 ## 🌐 Live Cloud Deployment (Render)
 
-Cashiko is fully pre-configured for instant zero-downtime deployment on Render:
+Cashiko is fully deployed and accessible live in the cloud:
 
-- **Frontend**: Deployed on **Render Static Sites** with root directory `Frontend`, build command `npm install && npm run build`, publish directory `dist`, and SPA `_redirects` support.
-- **Backend**: Deployed on **Render Web Services** with root directory `Backend`, runtime `Python 3`, start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, and automatic CORS regex matching `https://.*\.onrender\.com`.
+- **Live Frontend App**: [https://paypal-hackthon-frontend.onrender.com/](https://paypal-hackthon-frontend.onrender.com/) (Deployed on Render Static Sites with SPA rewrite handling)
+- **Live Backend API**: [https://paypal-hackthon-backend.onrender.com/](https://paypal-hackthon-backend.onrender.com/) (FastAPI service with automatic CORS regex matching)
+- **Interactive API Docs**: [https://paypal-hackthon-backend.onrender.com/docs](https://paypal-hackthon-backend.onrender.com/docs)
 
 ---
 
